@@ -29,50 +29,14 @@
 
 	// Popular wallets we surface as install links when they're NOT
 	// announced via EIP-6963. Match key is `rdns` (reverse-DNS, the
-	// stable identifier each wallet emits). Icons are rounded brand-
-	// coloured tiles with a path-drawn letter — placeholders that don't
-	// pretend to be the official logos but remain recognisable. Swap
-	// to brand SVGs in a follow-up if needed.
+	// stable identifier each wallet emits). Intentionally text-only —
+	// drawing a 24×24 approximation of a brand glyph reads as "fake
+	// logo," and the row's job here is just "go install this," not
+	// "be visually identifiable as the brand."
 	var SUGGESTED_WALLETS = [
-		{
-			rdns: 'io.metamask',
-			name: 'MetaMask',
-			installUrl: 'https://metamask.io/download/',
-			icon: ''
-				+ '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24">'
-				+   '<rect width="24" height="24" rx="6" fill="#E2761B"/>'
-				+   '<path d="M7 16l1.5-5.5L7 8.5 9 7l3 1.5L15 7l2 1.5-1.5 2L17 16l-2 1-1.5-2-1.5 1-1.5-1L9 17z" fill="#fff"/>'
-				+ '</svg>',
-		},
-		{
-			rdns: 'me.rainbow',
-			name: 'Rainbow',
-			installUrl: 'https://rainbow.me/download/',
-			icon: ''
-				+ '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24">'
-				+   '<defs>'
-				+     '<linearGradient id="sx402-rb" x1="0" y1="0" x2="1" y2="1">'
-				+       '<stop offset="0" stop-color="#FF4000"/>'
-				+       '<stop offset="0.5" stop-color="#FFB800"/>'
-				+       '<stop offset="1" stop-color="#0894FF"/>'
-				+     '</linearGradient>'
-				+   '</defs>'
-				+   '<rect width="24" height="24" rx="6" fill="url(#sx402-rb)"/>'
-				+   '<path d="M5 19a8 8 0 0 1 8-8M5 15a4 4 0 0 1 4-4" stroke="#fff" stroke-width="1.6" fill="none" stroke-linecap="round"/>'
-				+   '<circle cx="6" cy="18" r="1.2" fill="#fff"/>'
-				+ '</svg>',
-		},
-		{
-			rdns: 'com.coinbase.wallet',
-			name: 'Coinbase Wallet',
-			installUrl: 'https://www.coinbase.com/wallet/downloads',
-			icon: ''
-				+ '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24">'
-				+   '<rect width="24" height="24" rx="6" fill="#0052FF"/>'
-				+   '<circle cx="12" cy="12" r="6" stroke="#fff" stroke-width="1.6" fill="none"/>'
-				+   '<rect x="9.5" y="9.5" width="5" height="5" rx="1" fill="#fff"/>'
-				+ '</svg>',
-		},
+		{ rdns: 'io.metamask',         name: 'MetaMask',        installUrl: 'https://metamask.io/download/' },
+		{ rdns: 'me.rainbow',          name: 'Rainbow',         installUrl: 'https://rainbow.me/download/' },
+		{ rdns: 'com.coinbase.wallet', name: 'Coinbase Wallet', installUrl: 'https://www.coinbase.com/wallet/downloads' },
 	];
 
 	// How long after the EIP-6963 request to wait before deciding which
@@ -276,9 +240,10 @@
 				link.href = w.installUrl;
 				link.target = '_blank';
 				link.rel = 'noopener noreferrer';
+				// Text + trailing arrow only. No icon — see SUGGESTED_WALLETS
+				// comment.
 				link.innerHTML = ''
-					+ '<span class="sx402-pay-icon" aria-hidden="true">' + w.icon + '</span>'
-					+ '<span class="sx402-pay-label">Get ' + w.name + '</span>'
+					+ '<span class="sx402-pay-label">Install ' + w.name + '</span>'
 					+ '<span class="sx402-pay-meta" aria-hidden="true">↗</span>';
 				host.container.appendChild( link );
 			} );

@@ -719,10 +719,15 @@ final class PaywallController {
 		color: var(--sx402-text-faint);
 		font-size: 13px;
 	}
-	/* Install-link variant — visually mirrors the regular wallet row but
-	   renders as an <a> instead of a <button>. The text-decoration reset
-	   keeps anchor styles from leaking through. */
+	/* Install-link variant — outbound link, not a payment action. Visually
+	   secondary: tighter padding, smaller font, muted label colour, and
+	   no icon column (drawing a 24px approximation of MetaMask/Rainbow at
+	   that size reads as "fake logo," so install rows are intentionally
+	   text-only). The text-decoration reset keeps anchor styles from
+	   leaking through. */
 	.sx402-pay-button--install {
+		padding: 8px 14px;
+		font-size: 13px;
 		text-decoration: none;
 	}
 	.sx402-pay-button--install .sx402-pay-label {
