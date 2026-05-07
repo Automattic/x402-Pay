@@ -7,7 +7,7 @@
 
 declare(strict_types=1);
 
-namespace SimpleX402\Payment\Providers;
+namespace SimpleX402\Payment\Providers\GravatarWallet;
 
 use SimpleX402\Payment\PaymentProviderRegistry;
 
@@ -17,8 +17,11 @@ use SimpleX402\Payment\PaymentProviderRegistry;
  * Wallet" button for any 402 response. The popup signs USDC on Base
  * mainnet only — JS surfaces a console.warn for other networks rather than
  * hiding the button, so testing flows aren't blocked.
+ *
+ * Co-located with `script.js` (browser side) so the provider's PHP +
+ * client-side runtime live in one folder.
  */
-final class GravatarWallet {
+final class Provider {
 
 	/** Empty string disables the provider. */
 	public const WALLET_ORIGIN_FILTER = 'simple_x402_gravatar_wallet_origin';
@@ -50,7 +53,7 @@ final class GravatarWallet {
 		$providers[] = array(
 			'id'          => self::PROVIDER_ID,
 			'label'       => __( 'Pay with Gravatar Wallet', 'simple-x402' ),
-			'script_url'  => plugins_url( 'assets/payment/providers/gravatar-wallet.js', SIMPLE_X402_FILE ),
+			'script_url'  => plugins_url( 'src/Payment/Providers/GravatarWallet/script.js', SIMPLE_X402_FILE ),
 			'is_eligible' => true,
 			'config'      => array( 'gravatarOrigin' => $origin ),
 		);

@@ -407,7 +407,7 @@ final class PaywallController {
 		}
 
 		$status   = esc_html__( 'Choose a payment method to continue.', 'simple-x402' );
-		$host_url = plugins_url( 'assets/payment/host.js', SIMPLE_X402_FILE );
+		$host_url = plugins_url( 'src/Payment/loader.js', SIMPLE_X402_FILE );
 
 		return '<div class="sx402-checkout">'
 			. '<div class="sx402-providers">' . $slots . '</div>'
