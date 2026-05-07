@@ -100,7 +100,18 @@
 		var button = document.createElement( 'button' );
 		button.type = 'button';
 		button.className = 'sx402-pay-button';
-		button.textContent = 'Pay with Gravatar Wallet';
+		// List-row layout: official Gravatar G mark at the left, label at
+		// the right. SVG path is taken from gravatar.com's brand SVG with
+		// the wordmark stripped — viewBox cropped from 0 0 146 27 to
+		// 0 0 27 27 so only the G survives. Brand fill applied inline so
+		// the mark renders correctly regardless of host-site CSS.
+		button.innerHTML = ''
+			+ '<span class="sx402-pay-icon" aria-hidden="true">'
+			+   '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 27 27" width="24" height="24">'
+			+     '<path fill="#1D4FC4" d="M10.8 2.699v9.45a2.699 2.699 0 005.398 0V5.862a8.101 8.101 0 11-8.423 1.913 2.702 2.702 0 00-3.821-3.821A13.5 13.5 0 1013.499 0 2.699 2.699 0 0010.8 2.699z"/>'
+			+   '</svg>'
+			+ '</span>'
+			+ '<span class="sx402-pay-label">Pay with Gravatar Wallet</span>';
 		host.container.appendChild( button );
 
 		button.addEventListener( 'click', async function () {

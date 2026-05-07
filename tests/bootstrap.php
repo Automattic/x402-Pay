@@ -12,10 +12,21 @@ if ( ! defined( 'SIMPLE_X402_VERSION' ) ) {
 if ( ! defined( 'SIMPLE_X402_DIR' ) ) {
 	define( 'SIMPLE_X402_DIR', dirname( __DIR__ ) . '/' );
 }
+// WordPress time constants — defined globally in wp-includes/default-constants.php
+// at runtime, but not present in the unit-test bootstrap.
+if ( ! defined( 'MINUTE_IN_SECONDS' ) ) define( 'MINUTE_IN_SECONDS', 60 );
+if ( ! defined( 'HOUR_IN_SECONDS' ) )   define( 'HOUR_IN_SECONDS', 3600 );
+if ( ! defined( 'DAY_IN_SECONDS' ) )    define( 'DAY_IN_SECONDS', 86400 );
+if ( ! defined( 'WEEK_IN_SECONDS' ) )   define( 'WEEK_IN_SECONDS', 604800 );
 
 if ( ! function_exists( '__' ) ) {
 	function __( string $text, string $domain = 'default' ): string {
 		return $text;
+	}
+}
+if ( ! function_exists( '_n' ) ) {
+	function _n( string $single, string $plural, int $number, string $domain = 'default' ): string {
+		return 1 === $number ? $single : $plural;
 	}
 }
 if ( ! function_exists( 'esc_html' ) ) {
@@ -26,6 +37,11 @@ if ( ! function_exists( 'esc_html' ) ) {
 if ( ! function_exists( 'esc_attr' ) ) {
 	function esc_attr( string $text ): string {
 		return htmlspecialchars( $text, ENT_QUOTES, 'UTF-8' );
+	}
+}
+if ( ! function_exists( 'esc_url' ) ) {
+	function esc_url( string $url ): string {
+		return htmlspecialchars( $url, ENT_QUOTES, 'UTF-8' );
 	}
 }
 if ( ! function_exists( 'sanitize_text_field' ) ) {
@@ -271,6 +287,11 @@ if ( ! function_exists( 'get_post' ) ) {
 			}
 		}
 		return $obj;
+	}
+}
+if ( ! function_exists( 'get_site_icon_url' ) ) {
+	function get_site_icon_url( int $size = 512, string $url = '', int $blog_id = 0 ): string {
+		return (string) ( $GLOBALS['__sx402_site_icon_url'] ?? '' );
 	}
 }
 if ( ! function_exists( 'get_bloginfo' ) ) {
