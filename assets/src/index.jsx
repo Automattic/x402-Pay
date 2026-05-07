@@ -630,20 +630,21 @@ const FACILITATOR_FIELDS = [
 // characters, which is what local validation is for.
 const WALLET_RE = /^0x[0-9a-fA-F]{40}$/;
 
-// CDP API key IDs are UUIDs (8-4-4-4-12 lowercase hex).
-const CDP_KEY_ID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
-// Loose sanity check: base64 alphabet (incl. URL-safe variant) plus padding,
-// minimum 40 characters. Catches partial pastes / wrong field; the real
-// check is Coinbase rejecting the JWT on first verify.
-const CDP_KEY_SECRET_RE = /^[A-Za-z0-9+/_=-]{40,}$/;
-
 const METAMASK_URL = 'https://metamask.io/';
 
-const CDP_DOCS_URL =
-	'https://docs.cdp.coinbase.com/api-reference/v2/authentication#secret-api-key';
-
 const emptySlot = () => ( { wallet_address: '', api_key_id: '' } );
+
+// Compile a regex from a connector-supplied pattern string. Returns null
+// when the pattern is missing or unparseable so the caller can fall back
+// to "no client-side validation" rather than throwing on bad config.
+function compileConnectorPattern( pattern ) {
+	if ( ! pattern || typeof pattern !== 'string' ) return null;
+	try {
+		return new RegExp( pattern );
+	} catch ( _ ) {
+		return null;
+	}
+}
 
 const EMPTY_CREDENTIAL_STATE = {
 	has_secret: false,
@@ -692,12 +693,25 @@ function FacilitatorCard( {
 	const secretInputShown =
 		secretEditable && ( ! credentialState.has_secret || replaceOpen );
 
+	const adminMeta =
+		'' !== facilitator
+			? ( config.connectorAdminMeta || {} )[ facilitator ] ?? null
+			: null;
+	const keyIdRe = compileConnectorPattern( adminMeta?.keyIdPattern );
+	const keySecretRe = compileConnectorPattern( adminMeta?.keySecretPattern );
+
 	const trimmedKeyId = ( slot.api_key_id || '' ).trim();
 	const keyIdInvalid =
-		apiKeyInputsVisible && '' !== trimmedKeyId && ! CDP_KEY_ID_RE.test( trimmedKeyId );
+		apiKeyInputsVisible &&
+		null !== keyIdRe &&
+		'' !== trimmedKeyId &&
+		! keyIdRe.test( trimmedKeyId );
 	const trimmedSecret = pendingSecret.trim();
 	const secretInvalid =
-		secretInputShown && '' !== trimmedSecret && ! CDP_KEY_SECRET_RE.test( trimmedSecret );
+		secretInputShown &&
+		null !== keySecretRe &&
+		'' !== trimmedSecret &&
+		! keySecretRe.test( trimmedSecret );
 
 	const walletValue = slot.wallet_address || '';
 	const trimmedWallet = walletValue.trim();
@@ -837,49 +851,42 @@ function FacilitatorCard( {
 							<>
 								<div className="simple-x402-page__divider" />
 								<div className="simple-x402-page__api-keys">
-									<div className="simple-x402-page__api-keys-intro">
-										<Text size={ 13 }>
-											{ __(
-												'Connect this site to Coinbase to accept USDC payments on Base mainnet.',
-												'simple-x402'
+									{ adminMeta && (
+										<div className="simple-x402-page__api-keys-intro">
+											{ adminMeta.introHeadline && (
+												<Text size={ 13 }>{ adminMeta.introHeadline }</Text>
 											) }
-										</Text>
-										<Text size={ 13 } variant="muted">
-											{ createInterpolateElement(
-												__(
-													'Read the <docs>guide on creating your API keys</docs>, then paste the two values it gives you below.',
-													'simple-x402'
-												),
-												{
-													docs: (
-														<a
-															href={ CDP_DOCS_URL }
-															target="_blank"
-															rel="noopener noreferrer"
-														/>
-													),
-												}
+											{ adminMeta.introBody && (
+												<Text size={ 13 } variant="muted">
+													{ createInterpolateElement( adminMeta.introBody, {
+														docs: adminMeta.docsUrl ? (
+															<a
+																href={ adminMeta.docsUrl }
+																target="_blank"
+																rel="noopener noreferrer"
+															>
+																{ adminMeta.docsLinkText || adminMeta.docsUrl }
+															</a>
+														) : (
+															<span>{ adminMeta.docsLinkText || '' }</span>
+														),
+													} ) }
+												</Text>
 											) }
-										</Text>
-									</div>
+										</div>
+									) }
 									<TextControl
 										__nextHasNoMarginBottom
 										__next40pxDefaultSize
 										label={ __( 'API key ID', 'simple-x402' ) }
-										placeholder={ __(
-											'00000000-0000-0000-0000-000000000000',
-											'simple-x402'
-										) }
+										placeholder={ adminMeta?.keyIdPlaceholder || '' }
 										help={
-											keyIdInvalid ? (
+											keyIdInvalid && adminMeta?.keyIdInvalidMessage ? (
 												<span
 													className="simple-x402-page__field-error"
 													role="alert"
 												>
-													{ __(
-														'Doesn’t look like a UUID. Copy the value labelled “API Key ID” in the CDP Portal.',
-														'simple-x402'
-													) }
+													{ adminMeta.keyIdInvalidMessage }
 												</span>
 											) : null
 										}
@@ -934,20 +941,14 @@ function FacilitatorCard( {
 												__nextHasNoMarginBottom
 												label={ __( 'API key secret', 'simple-x402' ) }
 												hideLabelFromVision
-												placeholder={ __(
-													'Paste the long secret string from the CDP Portal.',
-													'simple-x402'
-												) }
+												placeholder={ adminMeta?.keySecretPlaceholder || '' }
 												help={
-													secretInvalid ? (
+													secretInvalid && adminMeta?.keySecretInvalidMessage ? (
 														<span
 															className="simple-x402-page__field-error"
 															role="alert"
 														>
-															{ __(
-																'That doesn’t look like a CDP key secret. Copy the “API Key Secret” value, not the JSON key/value pair.',
-																'simple-x402'
-															) }
+															{ adminMeta.keySecretInvalidMessage }
 														</span>
 													) : (
 														createInterpolateElement(

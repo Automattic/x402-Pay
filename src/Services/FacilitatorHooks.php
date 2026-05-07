@@ -19,4 +19,13 @@ final class FacilitatorHooks {
 	public const PAYMENT_SETTLED = 'simple_x402_payment_settled';
 
 	public const LEDGER_REPORT_URL = 'simple_x402_ledger_report_url';
+
+	/**
+	 * Per-connector admin UI strings + validation rules. Filter signature:
+	 * `apply_filters( CONNECTOR_ADMIN_META, array $meta, string $connector_id )`.
+	 * Connectors that need API key inputs hook this to provide intro copy,
+	 * docs links, placeholders, regex patterns, and error messages — keeping
+	 * connector-specific text out of the generic admin React app.
+	 */
+	public const CONNECTOR_ADMIN_META = 'simple_x402_connector_admin_meta';
 }

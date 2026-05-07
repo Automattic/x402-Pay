@@ -192,14 +192,19 @@ final class SettingsPage {
 		$managed_wallet_facilitators = array();
 		$api_key_facilitators        = array();
 		$connector_credentials       = array();
+		$connector_admin_meta        = array();
 		foreach ( $this->connectors->facilitators() as $fid => $connector ) {
 			if ( '' !== (string) apply_filters( FacilitatorHooks::MANAGED_POOL_PAY_TO, '', $fid ) ) {
 				$managed_wallet_facilitators[] = $fid;
 			}
 			$auth_method = (string) ( ( $connector['authentication']['method'] ?? '' ) );
 			if ( 'api_key' === $auth_method ) {
-				$api_key_facilitators[]          = $fid;
+				$api_key_facilitators[]        = $fid;
 				$connector_credentials[ $fid ] = $this->credentials->status( $fid );
+				$meta                          = apply_filters( FacilitatorHooks::CONNECTOR_ADMIN_META, array(), $fid );
+				if ( is_array( $meta ) && array() !== $meta ) {
+					$connector_admin_meta[ $fid ] = $meta;
+				}
 			}
 		}
 
@@ -222,6 +227,7 @@ final class SettingsPage {
 			'managedWalletFacilitators' => $managed_wallet_facilitators,
 			'apiKeyFacilitators'        => $api_key_facilitators,
 			'connectorCredentials'      => $connector_credentials,
+			'connectorAdminMeta'        => $connector_admin_meta,
 			'ajaxUrl'                   => function_exists( 'admin_url' ) ? admin_url( 'admin-ajax.php' ) : '',
 			'testConnection'            => array(
 				'action' => TestConnectionAjax::ACTION,

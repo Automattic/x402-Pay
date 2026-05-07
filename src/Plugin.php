@@ -18,6 +18,7 @@ use SimpleX402\Connectors\Coinbase\Registrar as CoinbaseRegistrar;
 use SimpleX402\Connectors\ConnectorRegistry;
 use SimpleX402\Connectors\TestConnectorRegistrar;
 use SimpleX402\Facilitator\FacilitatorResolver;
+use SimpleX402\Services\FacilitatorHooks;
 use SimpleX402\Http\PaywallController;
 use SimpleX402\Payment\Providers\GravatarWallet;
 use SimpleX402\Services\AllPostsModeNoticeEmitter;
@@ -99,6 +100,12 @@ final class Plugin {
 		add_filter(
 			'simple_x402_facilitator_for_connector',
 			array( $coinbase_connector, 'provide_facilitator' ),
+			10,
+			2
+		);
+		add_filter(
+			FacilitatorHooks::CONNECTOR_ADMIN_META,
+			array( $coinbase_connector, 'provide_admin_meta' ),
 			10,
 			2
 		);
