@@ -24,12 +24,13 @@ use SimpleX402\Services\FacilitatorHooks;
  *                               no facilitator selected (paywall inert).
  *   - facilitators:             Map of connector_id → { wallet_address,
  *                               api_key_id }. Each registered facilitator
- *                               remembers its own wallet and the public half
- *                               of its API key pair so swapping the picker
+ *                               remembers its own wallet and (for connectors
+ *                               that need an API key) the public ID half of
+ *                               the credential pair, so swapping the picker
  *                               recalls the values last configured for that
- *                               network. The matching api_key_secret is
- *                               handled by ConnectorCredentialStore — it
- *                               never lives in this slot.
+ *                               network. The matching secret is handled by
+ *                               {@see \SimpleX402\Services\ConnectorCredentialStore}
+ *                               — it never lives in this slot.
  *   - paywall_mode:             'none' | 'category' | 'all-posts'.
  *   - paywall_audience:         'everyone' | 'bots'.
  *   - paywall_category_term_id: term_id used in `category` mode.

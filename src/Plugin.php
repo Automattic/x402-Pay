@@ -14,7 +14,7 @@ use SimpleX402\Admin\PaywallProbeAjax;
 use SimpleX402\Admin\SettingsAjax;
 use SimpleX402\Admin\SettingsPage;
 use SimpleX402\Admin\TestConnectionAjax;
-use SimpleX402\Connectors\CoinbaseConnectorRegistrar;
+use SimpleX402\Connectors\Coinbase\Registrar as CoinbaseRegistrar;
 use SimpleX402\Connectors\ConnectorRegistry;
 use SimpleX402\Connectors\TestConnectorRegistrar;
 use SimpleX402\Facilitator\FacilitatorResolver;
@@ -94,7 +94,7 @@ final class Plugin {
 			2
 		);
 
-		$coinbase_connector = new CoinbaseConnectorRegistrar();
+		$coinbase_connector = new CoinbaseRegistrar();
 		add_action( 'wp_connectors_init', $coinbase_connector );
 		add_filter(
 			'simple_x402_facilitator_for_connector',

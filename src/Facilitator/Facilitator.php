@@ -12,9 +12,9 @@ namespace SimpleX402\Facilitator;
 use SimpleX402\Services\FacilitatorProfile;
 
 /**
- * The plugin talks to facilitators (x402.org, Coinbase CDP, etc.) through
- * this single interface. Connector authors return an instance of this from
- * the `simple_x402_facilitator_for_connector` filter.
+ * The plugin talks to every external facilitator service through this single
+ * interface, regardless of network, asset, or auth scheme. Connector authors
+ * return an instance from the `simple_x402_facilitator_for_connector` filter.
  */
 interface Facilitator {
 

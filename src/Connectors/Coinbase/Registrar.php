@@ -7,21 +7,21 @@
 
 declare(strict_types=1);
 
-namespace SimpleX402\Connectors;
+namespace SimpleX402\Connectors\Coinbase;
 
+use SimpleX402\Connectors\ConnectorRegistry;
 use SimpleX402\Facilitator\Facilitator;
 use SimpleX402\Services\ConnectorCredentialStore;
-use SimpleX402\Services\FacilitatorProfile;
 use SimpleX402\Services\X402FacilitatorClient;
 use SimpleX402\Settings\SettingsRepository;
 
 /**
  * Registers `coinbase_cdp` — Base mainnet USDC settled through Coinbase CDP's
- * x402 facilitator. The connector entry surfaces in the admin picker; the
- * actual verify/settle flow needs JWT signing that X402FacilitatorClient does
- * not yet implement, so the integration is "list-only" until that lands.
+ * x402 facilitator. The connector entry surfaces in the admin picker, and the
+ * provider hook builds an X402FacilitatorClient pointed at the CDP profile
+ * with the JWT signer pre-wired.
  */
-final class CoinbaseConnectorRegistrar {
+final class Registrar {
 
 	public const ID = 'coinbase_cdp';
 
@@ -45,7 +45,7 @@ final class CoinbaseConnectorRegistrar {
 			return $existing;
 		}
 		return new X402FacilitatorClient(
-			FacilitatorProfile::for_coinbase_cdp(
+			Profile::for_cdp(
 				$this->settings->api_key_id_for( self::ID ),
 				$this->credentials->secret( self::ID ),
 			)

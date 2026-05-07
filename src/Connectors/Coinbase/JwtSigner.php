@@ -7,25 +7,25 @@
 
 declare(strict_types=1);
 
-namespace SimpleX402\Services;
+namespace SimpleX402\Connectors\Coinbase;
 
 use RuntimeException;
+use SimpleX402\Facilitator\RequestSigner;
 
 /**
  * Mints a fresh, single-use bearer token for each call to a Coinbase CDP API.
  *
  * CDP rejects static API keys: every request needs a JWT signed with the key's
  * Ed25519 private half, valid for ≤120 seconds, with a `uri` claim that pins
- * the token to one method+host+path. This class does only that — it has no
- * HTTP, no settings, no WordPress dependencies — so the signer is trivially
- * unit-testable.
+ * the token to one method+host+path. The class has no HTTP, no settings,
+ * no WordPress dependencies — so the signer is trivially unit-testable.
  *
  * Header: `{ alg: "EdDSA", typ: "JWT", kid, nonce }`
  * Claims: `{ sub, iss: "cdp", aud: ["cdp_service"], nbf, exp, uri }`
  *
  * Spec: https://docs.cdp.coinbase.com/api-reference/v2/authentication
  */
-final class CoinbaseJwtSigner {
+final class JwtSigner implements RequestSigner {
 
 	/** Coinbase rejects tokens with `exp - nbf > 120`. */
 	public const TOKEN_TTL_SECONDS = 120;
@@ -35,10 +35,19 @@ final class CoinbaseJwtSigner {
 		private readonly string $key_secret_base64,
 	) {}
 
-	public function sign( string $method, string $host, string $path ): string {
+	/**
+	 * @return array<string,string> Authorization header for one request.
+	 */
+	public function sign( string $method, string $url ): array {
+		if ( '' === $this->key_id || '' === $this->key_secret_base64 ) {
+			throw new RuntimeException( 'Coinbase CDP credentials are not configured.' );
+		}
 		if ( ! function_exists( 'sodium_crypto_sign_detached' ) ) {
 			throw new RuntimeException( 'libsodium is required to sign Coinbase CDP requests.' );
 		}
+		$parts  = wp_parse_url( $url );
+		$host   = (string) ( $parts['host'] ?? '' );
+		$path   = (string) ( $parts['path'] ?? '/' );
 		$secret = $this->decode_secret();
 		$now    = time();
 		$header = array(
@@ -53,15 +62,16 @@ final class CoinbaseJwtSigner {
 			'aud' => array( 'cdp_service' ),
 			'nbf' => $now,
 			'exp' => $now + self::TOKEN_TTL_SECONDS,
-			// CDP normalises path-without-leading-slash; the spec is literal:
-			// "${METHOD} ${HOST}${PATH}" with one space between method and host.
+			// CDP's spec is literal: "${METHOD} ${HOST}${PATH}" with one
+			// space between method and host, and a leading slash on path.
 			'uri' => strtoupper( $method ) . ' ' . $host . $path,
 		);
 		$signing_input = self::base64url( (string) wp_json_encode( $header ) )
 			. '.'
 			. self::base64url( (string) wp_json_encode( $claims ) );
 		$signature     = sodium_crypto_sign_detached( $signing_input, $secret );
-		return $signing_input . '.' . self::base64url( $signature );
+		$jwt           = $signing_input . '.' . self::base64url( $signature );
+		return array( 'Authorization' => 'Bearer ' . $jwt );
 	}
 
 	/**

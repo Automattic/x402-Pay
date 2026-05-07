@@ -17,10 +17,10 @@ use Throwable;
  * Posts PaymentRequirements + PaymentPayload bodies to a facilitator's
  * /verify and /settle endpoints using wp_remote_post.
  *
- * Endpoint URL and optional bearer authorization come from the injected
- * FacilitatorProfile. The public x402.org facilitator is used in test mode
- * (no auth); live mode typically targets a commercial facilitator (e.g.
- * Coinbase CDP) that requires an API key.
+ * Authentication is delegated to the optional {@see \SimpleX402\Facilitator\RequestSigner}
+ * carried by the profile — the client never knows which scheme is in play
+ * (no auth, static bearer, signed JWT, …) and just merges whatever headers
+ * the signer returns into each outbound request.
  */
 final class X402FacilitatorClient implements Facilitator {
 
@@ -84,35 +84,20 @@ final class X402FacilitatorClient implements Facilitator {
 	/**
 	 * Probe the facilitator to see if the configured credentials work.
 	 *
-	 * For CDP-style profiles (key id + base64 secret) this is a signed GET
-	 * against `/supported`, so a green check actually means "auth passes."
-	 * For unauthenticated facilitators we fall back to a HEAD against the
-	 * base URL — any non-5xx counts as reachable.
+	 * For authenticated profiles (signer present) this is a signed GET against
+	 * `/supported`, so a green check actually means "auth passes." For
+	 * unauthenticated facilitators we fall back to a HEAD against the base
+	 * URL — any non-5xx counts as reachable.
 	 */
 	public function test_connection(): TestResult {
 		$base    = rtrim( $this->profile->facilitator_url, '/' );
 		$started = microtime( true );
 
-		if ( FacilitatorProfile::AUTH_CDP_JWT === $this->profile->auth_scheme
-			&& ! $this->cdp_credentials_complete() ) {
-			return new TestResult(
-				ok: false,
-				error: 'Add the API key ID and secret to verify connectivity.',
-				duration_ms: 0,
-			);
-		}
-
-		if ( $this->uses_cdp_jwt() ) {
-			$args = array(
-				'method'  => 'GET',
-				'timeout' => self::PROBE_TIMEOUT,
-				'headers' => array( 'Accept' => 'application/json' ),
-			);
+		if ( null === $this->profile->signer ) {
+			$raw = wp_remote_head( $base . '/', array( 'timeout' => self::PROBE_TIMEOUT ) );
+		} else {
 			try {
-				$args['headers'] = array_merge(
-					$args['headers'],
-					$this->auth_headers_for( 'GET', $base . '/supported' )
-				);
+				$auth_headers = $this->profile->signer->sign( 'GET', $base . '/supported' );
 			} catch ( Throwable $e ) {
 				return new TestResult(
 					ok: false,
@@ -120,9 +105,14 @@ final class X402FacilitatorClient implements Facilitator {
 					duration_ms: (int) round( ( microtime( true ) - $started ) * 1000 ),
 				);
 			}
-			$raw = wp_remote_request( $base . '/supported', $args );
-		} else {
-			$raw = wp_remote_head( $base . '/', array( 'timeout' => self::PROBE_TIMEOUT ) );
+			$raw = wp_remote_request(
+				$base . '/supported',
+				array(
+					'method'  => 'GET',
+					'timeout' => self::PROBE_TIMEOUT,
+					'headers' => array_merge( array( 'Accept' => 'application/json' ), $auth_headers ),
+				)
+			);
 		}
 
 		$elapsed = (int) round( ( microtime( true ) - $started ) * 1000 );
@@ -143,9 +133,10 @@ final class X402FacilitatorClient implements Facilitator {
 				duration_ms: $elapsed,
 			);
 		}
-		// CDP probe: 401/403 means the JWT was rejected — that's an auth
-		// failure, not a "reachable but quirky" success.
-		if ( $this->uses_cdp_jwt() && in_array( $code, array( 401, 403 ), true ) ) {
+		// For authenticated probes, 401/403 means the signer's credentials
+		// were rejected — that's an auth failure, not a "reachable but quirky"
+		// success. Unauthenticated probes pass through to the success path.
+		if ( null !== $this->profile->signer && in_array( $code, array( 401, 403 ), true ) ) {
 			return new TestResult(
 				ok: false,
 				error: "HTTP {$code} — credentials rejected",
@@ -176,13 +167,15 @@ final class X402FacilitatorClient implements Facilitator {
 		$base = rtrim( $this->profile->facilitator_url, '/' ) . '/';
 		$url  = $base . ltrim( $endpoint, '/' );
 
-		try {
-			$headers = array_merge( $headers, $this->auth_headers_for( 'POST', $url ) );
-		} catch ( Throwable $e ) {
-			return array(
-				'body'  => array(),
-				'error' => $e->getMessage(),
-			);
+		if ( null !== $this->profile->signer ) {
+			try {
+				$headers = array_merge( $headers, $this->profile->signer->sign( 'POST', $url ) );
+			} catch ( Throwable $e ) {
+				return array(
+					'body'  => array(),
+					'error' => $e->getMessage(),
+				);
+			}
 		}
 
 		$raw = wp_remote_post(
@@ -216,44 +209,5 @@ final class X402FacilitatorClient implements Facilitator {
 			'body'  => $parsed,
 			'error' => null,
 		);
-	}
-
-	/**
-	 * Pick the right Authorization header for one request:
-	 * - CDP profiles (key id + base64 Ed25519 secret) → fresh per-request JWT.
-	 * - Static-bearer profiles (just `api_key` set) → that bearer.
-	 * - Unauthenticated profiles → no Authorization header.
-	 *
-	 * @return array<string,string>
-	 */
-	private function auth_headers_for( string $method, string $url ): array {
-		if ( FacilitatorProfile::AUTH_CDP_JWT === $this->profile->auth_scheme ) {
-			if ( ! $this->cdp_credentials_complete() ) {
-				throw new \RuntimeException(
-					'Coinbase CDP credentials are not configured.'
-				);
-			}
-			$parts  = wp_parse_url( $url );
-			$host   = (string) ( $parts['host'] ?? '' );
-			$path   = (string) ( $parts['path'] ?? '/' );
-			$signer = new CoinbaseJwtSigner(
-				$this->profile->api_key_id,
-				$this->profile->api_key_secret,
-			);
-			return array( 'Authorization' => 'Bearer ' . $signer->sign( $method, $host, $path ) );
-		}
-		if ( '' !== $this->profile->api_key ) {
-			return array( 'Authorization' => 'Bearer ' . $this->profile->api_key );
-		}
-		return array();
-	}
-
-	private function uses_cdp_jwt(): bool {
-		return FacilitatorProfile::AUTH_CDP_JWT === $this->profile->auth_scheme
-			&& $this->cdp_credentials_complete();
-	}
-
-	private function cdp_credentials_complete(): bool {
-		return '' !== $this->profile->api_key_id && '' !== $this->profile->api_key_secret;
 	}
 }

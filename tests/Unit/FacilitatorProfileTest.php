@@ -18,6 +18,6 @@ final class FacilitatorProfileTest extends TestCase {
 		$this->assertSame( 'USDC', $profile->eip712_name );
 		$this->assertSame( '2', $profile->eip712_version );
 		$this->assertSame( 'Testnet', $profile->environment_label );
-		$this->assertSame( '', $profile->api_key );
+		$this->assertNull( $profile->signer );
 	}
 }
