@@ -1,21 +1,101 @@
 /**
- * EIP-6963 wallet discovery + button rendering.
+ * EIP-6963 wallet discovery + EIP-712 signing.
  *
- * The dApp side of the "Multi Injected Provider Discovery" protocol —
- * dispatches `eip6963:requestProvider` to ask installed wallet extensions
- * to announce themselves, and listens for `eip6963:announceProvider` events
- * each wallet emits. One row per unique wallet (deduped by `info.rdns`)
- * is rendered using the announced icon + name.
+ * Detects browser-extension wallets via the EIP-6963 "Multi Injected Provider
+ * Discovery" protocol and renders a row per detected wallet using the
+ * announced icon + name. On click, builds the EIP-3009
+ * `TransferWithAuthorization` typed data, asks the announced provider to
+ * sign it, and hands the signature to the host's `retry()` so the original
+ * request is replayed with `Payment-Signature`. Mirrors what
+ * `scripts/pay.mjs` does in Node, but uses raw `provider.request` calls
+ * instead of viem.
  *
  * Spec: https://eips.ethereum.org/EIPS/eip-6963
- *
- * Phase 2 stub: clicking a row surfaces "Signing not yet wired up" via the
- * host status line. The actual EIP-712 typed-data signing comes in Phase 3.
  */
 ( function () {
 	if ( ! window.simpleX402 || typeof window.simpleX402.registerProvider !== 'function' ) {
 		console.error( '[sx402] evm-wallet provider loaded before host; skipping.' );
 		return;
+	}
+
+	// Network → EVM chainId. Kept tight: only what the plugin actually
+	// supports today. Adding a network on the PHP side without adding
+	// it here surfaces as a clear "Unsupported network" error rather
+	// than a silently-wrong signature.
+	var CHAIN_IDS = {
+		'base': 8453,
+		'base-sepolia': 84532,
+	};
+
+	function randomNonce32() {
+		var arr = new Uint8Array( 32 );
+		crypto.getRandomValues( arr );
+		return '0x' + Array.from( arr ).map( function ( b ) {
+			return b.toString( 16 ).padStart( 2, '0' );
+		} ).join( '' );
+	}
+
+	/**
+	 * Build the EIP-712 typed-data object for a `TransferWithAuthorization`
+	 * signing request, matching what the x402 facilitator expects on the
+	 * /verify path. `host.requirements.extra.{name,version}` come from the
+	 * facilitator profile via PaymentRequirementsBuilder; `chainId` is
+	 * derived from the network string (we don't ship it on the server side
+	 * because the network already implies it).
+	 */
+	function buildTypedData( requirements, fromAddress ) {
+		var network = requirements.network;
+		var chainId = CHAIN_IDS[ network ];
+		if ( ! chainId ) {
+			throw new Error( 'Unsupported network: ' + network );
+		}
+		var extra      = requirements.extra || {};
+		var domainName = extra.name;
+		var version    = extra.version;
+		if ( ! domainName || ! version ) {
+			throw new Error( 'EIP-712 domain (name/version) missing from PaymentRequirements.extra' );
+		}
+
+		var now         = Math.floor( Date.now() / 1000 );
+		var validBefore = now + ( Number( requirements.maxTimeoutSeconds ) || 120 );
+
+		var authorization = {
+			from: fromAddress,
+			to: requirements.payTo,
+			value: String( requirements.maxAmountRequired ),
+			validAfter: '0',
+			validBefore: String( validBefore ),
+			nonce: randomNonce32(),
+		};
+
+		var typedData = {
+			types: {
+				EIP712Domain: [
+					{ name: 'name', type: 'string' },
+					{ name: 'version', type: 'string' },
+					{ name: 'chainId', type: 'uint256' },
+					{ name: 'verifyingContract', type: 'address' },
+				],
+				TransferWithAuthorization: [
+					{ name: 'from', type: 'address' },
+					{ name: 'to', type: 'address' },
+					{ name: 'value', type: 'uint256' },
+					{ name: 'validAfter', type: 'uint256' },
+					{ name: 'validBefore', type: 'uint256' },
+					{ name: 'nonce', type: 'bytes32' },
+				],
+			},
+			primaryType: 'TransferWithAuthorization',
+			domain: {
+				name: domainName,
+				version: version,
+				chainId: chainId,
+				verifyingContract: requirements.asset,
+			},
+			message: authorization,
+		};
+
+		return { typedData: typedData, authorization: authorization };
 	}
 
 	window.simpleX402.registerProvider( 'evm-wallet', function ( host ) {
@@ -28,6 +108,43 @@
 			return ( info && typeof info.rdns === 'string' && info.rdns )
 				? info.rdns
 				: ( info && info.uuid ) || '';
+		}
+
+		async function payWith( announce, button ) {
+			var info = announce.info || {};
+			var provider = announce.provider;
+
+			button.disabled = true;
+			host.setStatus( 'Connecting to ' + ( info.name || 'wallet' ) + '…' );
+
+			try {
+				var accounts = await provider.request( { method: 'eth_requestAccounts' } );
+				var from = Array.isArray( accounts ) ? accounts[ 0 ] : null;
+				if ( ! from ) {
+					throw new Error( 'no account returned' );
+				}
+
+				host.setStatus( 'Sign the payment in ' + ( info.name || 'your wallet' ) + '…' );
+				var built = buildTypedData( host.requirements, from );
+
+				var signature = await provider.request( {
+					method: 'eth_signTypedData_v4',
+					params: [ from, JSON.stringify( built.typedData ) ],
+				} );
+
+				await host.retry( {
+					scheme: 'exact',
+					payload: {
+						signature: signature,
+						authorization: built.authorization,
+					},
+				} );
+			} catch ( e ) {
+				host.setStatus(
+					'Payment cancelled: ' + ( ( e && e.message ) || 'unknown error' )
+				);
+				button.disabled = false;
+			}
 		}
 
 		function renderRow( announce ) {
@@ -63,13 +180,7 @@
 			button.appendChild( labelSpan );
 
 			button.addEventListener( 'click', function () {
-				// Phase 3 will replace this with a real signTypedData_v4 call
-				// against `announce.provider`, building EIP-712 payment
-				// requirements from `host.requirements`.
-				host.setStatus(
-					'Signing with ' + ( info.name || 'this wallet' )
-					+ ' is not wired up yet (coming next iteration).'
-				);
+				payWith( announce, button );
 			} );
 
 			host.container.appendChild( button );
