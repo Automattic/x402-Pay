@@ -720,18 +720,21 @@ final class PaywallController {
 		font-size: 13px;
 	}
 	/* Install-link variant — outbound link, not a payment action. Visually
-	   secondary: tighter padding, smaller font, muted label colour, and
-	   no icon column (drawing a 24px approximation of MetaMask/Rainbow at
-	   that size reads as "fake logo," so install rows are intentionally
-	   text-only). The text-decoration reset keeps anchor styles from
-	   leaking through. */
+	   secondary: tighter padding, smaller font, muted label colour. Icon
+	   is the wallet's real official SVG (bundled with the plugin), not a
+	   placeholder. text-decoration reset keeps anchor styles from leaking
+	   through. */
 	.sx402-pay-button--install {
-		padding: 8px 14px;
+		padding: 10px 14px;
 		font-size: 13px;
 		text-decoration: none;
 	}
 	.sx402-pay-button--install .sx402-pay-label {
 		color: var(--sx402-text-muted);
+	}
+	.sx402-pay-button--install .sx402-pay-icon {
+		width: 20px;
+		height: 20px;
 	}
 	/* Section divider rendered above the install links — only appears when
 	   the EvmWallet provider has at least one suggested wallet that wasn't

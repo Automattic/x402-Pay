@@ -29,10 +29,10 @@
 
 	// Popular wallets we surface as install links when they're NOT
 	// announced via EIP-6963. Match key is `rdns` (reverse-DNS, the
-	// stable identifier each wallet emits). Intentionally text-only —
-	// drawing a 24×24 approximation of a brand glyph reads as "fake
-	// logo," and the row's job here is just "go install this," not
-	// "be visually identifiable as the brand."
+	// stable identifier each wallet emits). Icons are real brand SVGs
+	// bundled under `src/Payment/Providers/EvmWallet/icons/`; their
+	// public URLs ship via `host.config.suggestionIcons[rdns]` so the
+	// JS doesn't need to know plugin install paths.
 	var SUGGESTED_WALLETS = [
 		{ rdns: 'io.metamask',         name: 'MetaMask',        installUrl: 'https://metamask.io/download/' },
 		{ rdns: 'me.rainbow',          name: 'Rainbow',         installUrl: 'https://rainbow.me/download/' },
@@ -234,15 +234,21 @@
 				: 'don’t have a wallet?';
 			host.container.appendChild( divider );
 
+			var iconUrls = ( host.config && host.config.suggestionIcons ) || {};
+
 			missing.forEach( function ( w ) {
 				var link = document.createElement( 'a' );
 				link.className = 'sx402-pay-button sx402-pay-button--install';
 				link.href = w.installUrl;
 				link.target = '_blank';
 				link.rel = 'noopener noreferrer';
-				// Text + trailing arrow only. No icon — see SUGGESTED_WALLETS
-				// comment.
+
+				var iconHtml = iconUrls[ w.rdns ]
+					? '<span class="sx402-pay-icon" aria-hidden="true"><img src="'
+						+ iconUrls[ w.rdns ] + '" alt=""></span>'
+					: '';
 				link.innerHTML = ''
+					+ iconHtml
 					+ '<span class="sx402-pay-label">Install ' + w.name + '</span>'
 					+ '<span class="sx402-pay-meta" aria-hidden="true">↗</span>';
 				host.container.appendChild( link );
