@@ -9,13 +9,17 @@ declare(strict_types=1);
 
 namespace SimpleX402\Services;
 
+use SimpleX402\Facilitator\RequestSigner;
+
 /**
  * Bundles every constant needed to produce PaymentRequirements and talk to a
- * facilitator: network, ERC-20 token + decimals, facilitator endpoint, optional
- * bearer auth, and the EIP-712 domain fields.
+ * facilitator: network, ERC-20 token + decimals, facilitator endpoint, the
+ * EIP-712 domain, and an optional {@see RequestSigner} for facilitators that
+ * authenticate per request.
  *
- * Each Facilitator client exposes an instance via describe(); connector authors
- * construct it directly for their own facilitator. `for_test()` is the built-in
+ * Auth is opaque to this class — connectors supply whatever signer they need
+ * (or `null` for unauthenticated facilitators like x402.org). Connector
+ * authors construct an instance directly; `for_test()` is the built-in
  * x402.org/Base Sepolia profile for the dev test connector.
  */
 final class FacilitatorProfile {
@@ -28,7 +32,7 @@ final class FacilitatorProfile {
 		public readonly string $eip712_name,
 		public readonly string $eip712_version,
 		public readonly string $environment_label,
-		public readonly string $api_key = '',
+		public readonly ?RequestSigner $signer = null,
 	) {}
 
 	/**

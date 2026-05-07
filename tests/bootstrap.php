@@ -69,6 +69,17 @@ if ( ! function_exists( 'update_option' ) ) {
 		return true;
 	}
 }
+if ( ! function_exists( 'delete_option' ) ) {
+	function delete_option( string $name ): bool {
+		unset( $GLOBALS['__sx402_options'][ $name ] );
+		return true;
+	}
+}
+if ( ! function_exists( 'wp_date' ) ) {
+	function wp_date( string $format, ?int $timestamp = null ): string {
+		return gmdate( $format, $timestamp ?? time() );
+	}
+}
 if ( ! class_exists( 'WP_Error' ) ) {
 	class WP_Error {
 		public function __construct( public string $code = '', public string $message = '' ) {}
@@ -389,6 +400,12 @@ if ( ! function_exists( 'wp_send_json_success' ) ) {
 		$GLOBALS['__sx402_json_success'] = $data;
 	}
 }
+if ( ! function_exists( 'wp_send_json_error' ) ) {
+	function wp_send_json_error( $data = null, int $status_code = 0 ): void {
+		$GLOBALS['__sx402_json_error']             = $data;
+		$GLOBALS['__sx402_json_error_status_code'] = $status_code;
+	}
+}
 if ( ! function_exists( 'esc_html_e' ) ) {
 	function esc_html_e( string $text, string $domain = 'default' ): void {
 		echo htmlspecialchars( $text, ENT_QUOTES, 'UTF-8' );
@@ -673,38 +690,6 @@ $GLOBALS['__sx402_response'] = array(
 	'body'    => null,
 	'exited'  => false,
 );
-
-if ( ! class_exists( 'Automattic\\Jetpack\\Connection\\Client' ) ) {
-	/**
-	 * Stand-in for the jetpack-connection package's HTTP signer. Mirrors the
-	 * signature of `wpcom_json_api_request_as_blog` and records the call into
-	 * $GLOBALS['__sx402_jp'] so tests can assert what was sent + control the
-	 * canned response via $GLOBALS['__sx402_jp_next'].
-	 */
-	class Automattic_Jetpack_Connection_Client_Stub {
-		public static function wpcom_json_api_request_as_blog(
-			string $path,
-			string $version,
-			array $args = array(),
-			?string $body = null,
-			string $base_api_path = 'rest'
-		) {
-			$GLOBALS['__sx402_jp'] = array(
-				'path'          => $path,
-				'version'       => $version,
-				'args'          => $args,
-				'body'          => $body,
-				'base_api_path' => $base_api_path,
-			);
-			$next = $GLOBALS['__sx402_jp_next'] ?? null;
-			if ( $next instanceof \WP_Error ) {
-				return $next;
-			}
-			return $next ?? array( 'response' => array( 'code' => 200 ), 'body' => '{}' );
-		}
-	}
-	class_alias( 'Automattic_Jetpack_Connection_Client_Stub', 'Automattic\\Jetpack\\Connection\\Client' );
-}
 
 // Reset global state between tests.
 $GLOBALS['__sx402_options']     = array();

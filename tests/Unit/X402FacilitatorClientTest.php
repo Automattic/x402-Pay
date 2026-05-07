@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace SimpleX402\Tests\Unit;
 
 use PHPUnit\Framework\TestCase;
+use SimpleX402\Facilitator\RequestSigner;
 use SimpleX402\Services\FacilitatorProfile;
 use SimpleX402\Services\X402FacilitatorClient;
 
@@ -68,11 +69,18 @@ final class X402FacilitatorClientTest extends TestCase {
 		$this->assertSame( 'bad', $result['error'] );
 	}
 
-	public function test_profile_with_api_key_sends_bearer_authorization(): void {
+	public function test_profile_signer_headers_are_merged_into_outbound_requests(): void {
 		$GLOBALS['__sx402_http_next'] = array(
 			'response' => array( 'code' => 200 ),
 			'body'     => '{"isValid":true}',
 		);
+		$signer = new class implements RequestSigner {
+			public array $calls = array();
+			public function sign( string $method, string $url ): array {
+				$this->calls[] = array( 'method' => $method, 'url' => $url );
+				return array( 'Authorization' => 'Bearer fake-' . $method );
+			}
+		};
 		$profile = new FacilitatorProfile(
 			network: 'base',
 			asset: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913',
@@ -81,13 +89,39 @@ final class X402FacilitatorClientTest extends TestCase {
 			eip712_name: 'USD Coin',
 			eip712_version: '2',
 			environment_label: 'Live',
-			api_key: 'my-api-key',
+			signer: $signer,
 		);
-		$client  = new X402FacilitatorClient( $profile );
-		$client->verify( array(), array() );
+		( new X402FacilitatorClient( $profile ) )->verify( array(), array() );
 
 		$this->assertSame( 'https://facil.example/verify', $GLOBALS['__sx402_http']['url'] );
-		$this->assertSame( 'Bearer my-api-key', $GLOBALS['__sx402_http']['args']['headers']['Authorization'] );
+		$this->assertSame( 'Bearer fake-POST', $GLOBALS['__sx402_http']['args']['headers']['Authorization'] );
+		$this->assertCount( 1, $signer->calls );
+		$this->assertSame( 'POST', $signer->calls[0]['method'] );
+		$this->assertSame( 'https://facil.example/verify', $signer->calls[0]['url'] );
+	}
+
+	public function test_profile_signer_throw_aborts_call_with_error(): void {
+		$signer = new class implements RequestSigner {
+			public function sign( string $method, string $url ): array {
+				throw new \RuntimeException( 'creds missing' );
+			}
+		};
+		$profile = new FacilitatorProfile(
+			network: 'base',
+			asset: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913',
+			asset_decimals: 6,
+			facilitator_url: 'https://facil.example/',
+			eip712_name: 'USD Coin',
+			eip712_version: '2',
+			environment_label: 'Live',
+			signer: $signer,
+		);
+		$result = ( new X402FacilitatorClient( $profile ) )->verify( array(), array() );
+
+		$this->assertFalse( $result['isValid'] );
+		$this->assertSame( 'creds missing', $result['error'] );
+		// No HTTP call should have been issued — the throw aborts before wp_remote_post.
+		$this->assertNull( $GLOBALS['__sx402_http'] );
 	}
 
 	public function test_test_profile_omits_authorization_header(): void {

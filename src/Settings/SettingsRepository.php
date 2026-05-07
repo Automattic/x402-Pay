@@ -22,10 +22,15 @@ use SimpleX402\Services\FacilitatorHooks;
  *                               which network you're settling on.
  *   - selected_facilitator_id:  Connector ID dispatching verify/settle. '' means
  *                               no facilitator selected (paywall inert).
- *   - facilitators:             Map of connector_id → { wallet_address }.
- *                               Each registered facilitator remembers its own
- *                               wallet so swapping the picker recalls the one
- *                               that was last configured for that network.
+ *   - facilitators:             Map of connector_id → { wallet_address,
+ *                               api_key_id }. Each registered facilitator
+ *                               remembers its own wallet and (for connectors
+ *                               that need an API key) the public ID half of
+ *                               the credential pair, so swapping the picker
+ *                               recalls the values last configured for that
+ *                               network. The matching secret is handled by
+ *                               {@see \SimpleX402\Services\ConnectorCredentialStore}
+ *                               — it never lives in this slot.
  *   - paywall_mode:             'none' | 'category' | 'all-posts'.
  *   - paywall_audience:         'everyone' | 'bots'.
  *   - paywall_category_term_id: term_id used in `category` mode.
@@ -38,6 +43,15 @@ final class SettingsRepository {
 	public const OPTION_NAME      = 'simple_x402_settings';
 	public const DEFAULT_PRICE    = '0.01';
 	public const DEFAULT_CATEGORY = 'x402paywall';
+
+	/**
+	 * Hard caps on the facilitators map. The slot count cap stops a
+	 * compromised admin session from bloating the autoloaded option row;
+	 * the field cap is generous enough for any real wallet/key value
+	 * but rejects pathological MB-sized strings.
+	 */
+	public const MAX_FACILITATOR_SLOTS = 50;
+	public const MAX_SLOT_FIELD_BYTES  = 200;
 
 	public const PAYWALL_MODE_NONE      = 'none';
 	public const PAYWALL_MODE_CATEGORY  = 'category';
@@ -100,7 +114,7 @@ final class SettingsRepository {
 	 * SettingsPage bootstrap so the React picker can swap values locally
 	 * without refetching.
 	 *
-	 * @return array<string,array{wallet_address:string}>
+	 * @return array<string,array{wallet_address:string,api_key_id:string}>
 	 */
 	public function facilitator_slots(): array {
 		$stored = get_option( self::OPTION_NAME, array() );
@@ -112,9 +126,15 @@ final class SettingsRepository {
 			}
 			$out[ (string) $id ] = array(
 				'wallet_address' => (string) ( $slot['wallet_address'] ?? '' ),
+				'api_key_id'     => (string) ( $slot['api_key_id'] ?? '' ),
 			);
 		}
 		return $out;
+	}
+
+	public function api_key_id_for( string $facilitator_id ): string {
+		$slot = $this->slot_for( $facilitator_id );
+		return (string) ( $slot['api_key_id'] ?? '' );
 	}
 
 	/**
@@ -374,11 +394,17 @@ final class SettingsRepository {
 
 	/**
 	 * Canonicalise the submitted facilitators map. Unknown keys are dropped;
-	 * each slot is normalised to { wallet_address }. Invalid connector IDs
-	 * are filtered out.
+	 * each slot is normalised to { wallet_address, api_key_id }. Invalid
+	 * connector IDs are filtered out.
+	 *
+	 * Caps:
+	 * - At most {@see self::MAX_FACILITATOR_SLOTS} slots — extras are ignored.
+	 * - Each field is truncated to {@see self::MAX_SLOT_FIELD_BYTES} bytes.
+	 * Both bound the autoloaded option row size so a compromised admin
+	 * session can't inflate it to MB and slow every page load.
 	 *
 	 * @param mixed $raw Raw input (expected to be array<string,array>).
-	 * @return array<string,array{wallet_address:string}>
+	 * @return array<string,array{wallet_address:string,api_key_id:string}>
 	 */
 	private function sanitize_facilitators( mixed $raw ): array {
 		if ( ! is_array( $raw ) ) {
@@ -386,15 +412,26 @@ final class SettingsRepository {
 		}
 		$out = array();
 		foreach ( $raw as $id => $slot ) {
+			if ( count( $out ) >= self::MAX_FACILITATOR_SLOTS ) {
+				break;
+			}
 			$clean_id = $this->sanitize_connector_id( (string) $id );
 			if ( '' === $clean_id || ! is_array( $slot ) ) {
 				continue;
 			}
 			$out[ $clean_id ] = array(
-				'wallet_address' => isset( $slot['wallet_address'] ) ? trim( (string) $slot['wallet_address'] ) : '',
+				'wallet_address' => $this->trim_slot_field( $slot['wallet_address'] ?? '' ),
+				'api_key_id'     => $this->trim_slot_field( $slot['api_key_id'] ?? '' ),
 			);
 		}
 		return $out;
+	}
+
+	private function trim_slot_field( mixed $raw ): string {
+		$value = trim( (string) $raw );
+		return strlen( $value ) > self::MAX_SLOT_FIELD_BYTES
+			? substr( $value, 0, self::MAX_SLOT_FIELD_BYTES )
+			: $value;
 	}
 
 	private function sanitize_price( mixed $raw ): string {

@@ -100,8 +100,66 @@ body.simple-x402-screen .simple-x402-page__card-footer {
 	box-shadow: 0 0 0 1px #cc1818;
 }
 
-.simple-x402-page__wallet-error {
+// Inline error rendered inside a TextControl/TextareaControl `help` slot.
+// Wins over the muted gray default; the surrounding <p.help> still owns the
+// margin so spacing stays consistent with the non-error state.
+.simple-x402-page__field-error {
 	color: #cc1818;
-	font-size: 12px;
-	margin: 4px 0 0;
+}
+
+// Vertical spacing between the API key ID input and the secret field/status
+// row inside the facilitator card.
+.simple-x402-page__api-keys {
+	display: flex;
+	flex-direction: column;
+	gap: 20px;
+}
+
+.simple-x402-page__api-keys-intro {
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+	padding: 12px 14px;
+	border: 1px solid #e4e4e4;
+	border-radius: 8px;
+	background: #f6f7f7;
+
+	a {
+		text-decoration: underline;
+	}
+}
+
+// Layout for the secret block — typography on the inner label is delegated
+// to wp-components' .components-base-control__label so it matches the TextControl
+// labels above it without us re-declaring the rule.
+.simple-x402-page__api-key-secret {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+}
+
+.simple-x402-page__api-key-secret-label {
+	font-size: 11px;
+	font-weight: 499;
+    line-height: 1.4;
+    text-transform: uppercase;
+}
+
+.simple-x402-spinner-icon {
+	animation: simple-x402-spin 1s linear infinite;
+	transform-origin: center;
+}
+
+// Inline spinner used inside DiagnosticProbeLine — the wp-components Text
+// next to it sets line-height ~17px, so vertically centring the SVG keeps
+// the row from looking lopsided.
+.simple-x402-page__inline-spinner {
+	display: inline-flex;
+	align-items: center;
+	color: #757575;
+}
+
+@keyframes simple-x402-spin {
+	from { transform: rotate(0deg); }
+	to { transform: rotate(360deg); }
 }

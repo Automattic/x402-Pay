@@ -7,6 +7,7 @@ import {
 	CardFooter,
 	CardHeader,
 	TextControl,
+	TextareaControl,
 	__experimentalHStack as HStack,
 	__experimentalVStack as VStack,
 	__experimentalText as Text,
@@ -20,6 +21,35 @@ const config = window.simpleX402Settings;
 const boltIcon = (
 	<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" focusable="false">
 		<path d="M13 2 4 14h7l-1 8 9-12h-7l1-8z" fill="currentColor" />
+	</svg>
+);
+
+const spinnerIcon = (
+	<svg
+		xmlns="http://www.w3.org/2000/svg"
+		viewBox="0 0 24 24"
+		width="16"
+		height="16"
+		aria-hidden="true"
+		focusable="false"
+		className="simple-x402-spinner-icon"
+	>
+		<circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="2" fill="none" strokeOpacity="0.25" />
+		<path d="M12 3 A9 9 0 0 1 21 12" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" />
+	</svg>
+);
+
+const clockIcon = (
+	<svg
+		xmlns="http://www.w3.org/2000/svg"
+		viewBox="0 0 24 24"
+		width="16"
+		height="16"
+		aria-hidden="true"
+		focusable="false"
+	>
+		<circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="2" fill="none" />
+		<path d="M12 7 v5 l3 2" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round" />
 	</svg>
 );
 
@@ -147,17 +177,37 @@ async function runFacilitatorConnectivityAjax( connectorId ) {
  *
  * @param {object} props
  * @param {boolean} props.pending
+ * @param {boolean} [props.awaiting] Run checks is in progress but this
+ *                                   particular step hasn't started — render
+ *                                   a placeholder so the row holds its space.
  * @param {boolean} [props.success]
  * @param {number} [props.durationMs]
  * @param {string} [props.failureMessage]
  * @param {string} [props.infoMessage] Skipped / informational (no ✓/✗).
  */
-function DiagnosticProbeLine( { pending, success, durationMs, failureMessage, infoMessage } ) {
+function DiagnosticProbeLine( { pending, awaiting, success, durationMs, failureMessage, infoMessage } ) {
 	if ( pending ) {
 		return (
-			<Text size={ 13 } variant="muted">
-				{ __( 'Running check…', 'simple-x402' ) }
-			</Text>
+			<HStack spacing={ 1 } alignment="left" justify="flex-start">
+				<span className="simple-x402-page__inline-spinner" aria-hidden="true">
+					{ spinnerIcon }
+				</span>
+				<Text size={ 13 } variant="muted">
+					{ __( 'Running check…', 'simple-x402' ) }
+				</Text>
+			</HStack>
+		);
+	}
+	if ( awaiting ) {
+		return (
+			<HStack spacing={ 1 } alignment="left" justify="flex-start">
+				<span className="simple-x402-page__inline-spinner" aria-hidden="true">
+					{ clockIcon }
+				</span>
+				<Text size={ 13 } variant="muted">
+					{ __( 'Waiting for the previous step to finish…', 'simple-x402' ) }
+				</Text>
+			</HStack>
 		);
 	}
 	if ( infoMessage ) {
@@ -319,25 +369,6 @@ function RunChecksCard( {
 			</CardHeader>
 			<CardBody>
 				<VStack spacing={ 3 }>
-					<HStack spacing={ 3 } justify="flex-start" className="simple-x402-page__probe-row">
-						<Button
-							variant="primary"
-							size="compact"
-							type="button"
-							icon={ boltIcon }
-							iconSize={ 16 }
-							onClick={ onRunChecks }
-							disabled={
-								paywallDirty || facilitatorDirty || runChecksPending
-							}
-							accessibleWhenDisabled
-							aria-busy={ runChecksPending }
-						>
-							{ runChecksPending
-								? __( 'Running checks…', 'simple-x402' )
-								: __( 'Run checks', 'simple-x402' ) }
-						</Button>
-					</HStack>
 					{ facilitatorDirty && (
 						<Text size={ 13 } variant="muted">
 							{ __(
@@ -357,11 +388,12 @@ function RunChecksCard( {
 					{ showSteps && (
 						<VStack spacing={ 3 }>
 							<VStack spacing={ 0 } className="simple-x402-page__run-checks-step">
-								<Text size={ 12 } weight={ 600 } variant="muted">
+								<Text size={ 12 } weight={ 600 }>
 									{ __( '1. Facilitator connectivity', 'simple-x402' ) }
 								</Text>
 								<DiagnosticProbeLine
 									pending={ facilitatorCheck?.pending === true }
+									awaiting={ runChecksPending && facilitatorCheck == null }
 									success={ facilitatorCheck?.success === true }
 									durationMs={ facilitatorCheck?.durationMs }
 									failureMessage={ facilitatorCheck?.failureMessage }
@@ -369,11 +401,12 @@ function RunChecksCard( {
 								/>
 							</VStack>
 							<VStack spacing={ 0 } className="simple-x402-page__run-checks-step">
-								<Text size={ 12 } weight={ 600 } variant="muted">
+								<Text size={ 12 } weight={ 600 }>
 									{ __( '2. Paywall live probe', 'simple-x402' ) }
 								</Text>
 								<DiagnosticProbeLine
 									pending={ paywallCheck?.pending === true }
+									awaiting={ runChecksPending && paywallCheck == null }
 									success={ paywallCheck?.success === true }
 									durationMs={ paywallCheck?.durationMs }
 									failureMessage={ paywallCheck?.failureMessage }
@@ -382,6 +415,25 @@ function RunChecksCard( {
 							</VStack>
 						</VStack>
 					) }
+					<HStack spacing={ 3 } justify="flex-start" className="simple-x402-page__probe-row">
+						<Button
+							variant="primary"
+							size="compact"
+							type="button"
+							icon={ boltIcon }
+							iconSize={ 16 }
+							onClick={ onRunChecks }
+							disabled={
+								paywallDirty || facilitatorDirty || runChecksPending
+							}
+							accessibleWhenDisabled
+							aria-busy={ runChecksPending }
+						>
+							{ runChecksPending
+								? __( 'Running checks…', 'simple-x402' )
+								: __( 'Run checks', 'simple-x402' ) }
+						</Button>
+					</HStack>
 				</VStack>
 			</CardBody>
 		</Card>
@@ -396,8 +448,6 @@ function PaywallScopeCard( {
 	termId,
 	setTermId,
 	onPaywallFieldsChange,
-	beginPaywallSaveProbeSession,
-	runPaywallProbeFollowThrough,
 } ) {
 	const { saving, error, run } = useSave();
 
@@ -407,19 +457,12 @@ function PaywallScopeCard( {
 
 	const onSave = () =>
 		run( async () => {
-			const rid = beginPaywallSaveProbeSession();
-
-			const { values: merged, ajaxData: data } = await save( {
+			const { values: merged } = await save( {
 				paywall_mode: paywallMode,
 				paywall_category_term_id: termId,
 			} );
 			setPaywallMode( merged.paywall_mode );
 			setTermId( merged.paywall_category_term_id );
-
-			if ( ! Object.prototype.hasOwnProperty.call( data, 'probe' ) ) {
-				return;
-			}
-			await runPaywallProbeFollowThrough( data.probe, rid, merged );
 		} );
 
 	return (
@@ -578,11 +621,27 @@ const FACILITATOR_FIELDS = [
 // characters, which is what local validation is for.
 const WALLET_RE = /^0x[0-9a-fA-F]{40}$/;
 
-/** @see https://ethereum.org/guides/how-to-create-an-ethereum-account/ */
-const ETHEREUM_ACCOUNT_GUIDE_URL =
-	'https://ethereum.org/guides/how-to-create-an-ethereum-account/';
+const METAMASK_URL = 'https://metamask.io/';
 
-const emptySlot = () => ( { wallet_address: '' } );
+const emptySlot = () => ( { wallet_address: '', api_key_id: '' } );
+
+// Compile a regex from a connector-supplied pattern string. Returns null
+// when the pattern is missing or unparseable so the caller can fall back
+// to "no client-side validation" rather than throwing on bad config.
+function compileConnectorPattern( pattern ) {
+	if ( ! pattern || typeof pattern !== 'string' ) return null;
+	try {
+		return new RegExp( pattern );
+	} catch ( _ ) {
+		return null;
+	}
+}
+
+const EMPTY_CREDENTIAL_STATE = {
+	has_secret: false,
+	source: 'none',
+	is_writable: true,
+};
 
 function FacilitatorCard( {
 	saved,
@@ -592,7 +651,6 @@ function FacilitatorCard( {
 	slots,
 	setSlots,
 	onFacilitatorFormChange,
-	onFacilitatorSaveComplete,
 } ) {
 	const { saving, error, run } = useSave();
 
@@ -604,6 +662,46 @@ function FacilitatorCard( {
 
 	const managedWalletIds = config.managedWalletFacilitators || [];
 	const walletInputVisible = '' === facilitator || ! managedWalletIds.includes( facilitator );
+	const apiKeyIds = config.apiKeyFacilitators || [];
+	const apiKeyInputsVisible = '' !== facilitator && apiKeyIds.includes( facilitator );
+
+	const [ credentials, setCredentials ] = useState( config.connectorCredentials || {} );
+	const [ pendingSecret, setPendingSecret ] = useState( '' );
+	const [ replaceOpen, setReplaceOpen ] = useState( false );
+
+	useEffect( () => {
+		setPendingSecret( '' );
+		setReplaceOpen( false );
+	}, [ facilitator ] );
+
+	const credentialState =
+		'' !== facilitator && credentials[ facilitator ]
+			? credentials[ facilitator ]
+			: EMPTY_CREDENTIAL_STATE;
+	const secretEditable =
+		apiKeyInputsVisible && credentialState.is_writable;
+	const secretInputShown =
+		secretEditable && ( ! credentialState.has_secret || replaceOpen );
+
+	const adminMeta =
+		'' !== facilitator
+			? ( config.connectorAdminMeta || {} )[ facilitator ] ?? null
+			: null;
+	const keyIdRe = compileConnectorPattern( adminMeta?.keyIdPattern );
+	const keySecretRe = compileConnectorPattern( adminMeta?.keySecretPattern );
+
+	const trimmedKeyId = ( slot.api_key_id || '' ).trim();
+	const keyIdInvalid =
+		apiKeyInputsVisible &&
+		null !== keyIdRe &&
+		'' !== trimmedKeyId &&
+		! keyIdRe.test( trimmedKeyId );
+	const trimmedSecret = pendingSecret.trim();
+	const secretInvalid =
+		secretInputShown &&
+		null !== keySecretRe &&
+		'' !== trimmedSecret &&
+		! keySecretRe.test( trimmedSecret );
 
 	const walletValue = slot.wallet_address || '';
 	const trimmedWallet = walletValue.trim();
@@ -616,13 +714,13 @@ function FacilitatorCard( {
 		'' !== facilitator && walletInputVisible
 			? createInterpolateElement(
 					__(
-						'Required to accept payments. <a>How to create an Ethereum account</a> — guide on ethereum.org.',
+						'Have a wallet? Paste its public 0x address. New to crypto? Create one with <a>MetaMask</a>.',
 						'simple-x402'
 					),
 					{
 						a: (
 							<a
-								href={ ETHEREUM_ACCOUNT_GUIDE_URL }
+								href={ METAMASK_URL }
 								target="_blank"
 								rel="noopener noreferrer"
 							/>
@@ -633,7 +731,8 @@ function FacilitatorCard( {
 
 	const isDirty =
 		facilitator !== savedId ||
-		( '' !== facilitator && ! isShallowEqual( slot, savedSlot ) );
+		( '' !== facilitator && ! isShallowEqual( slot, savedSlot ) ) ||
+		'' !== pendingSecret;
 
 	const onWalletChange = ( edits ) => {
 		setSlots( {
@@ -648,10 +747,20 @@ function FacilitatorCard( {
 			if ( '' !== facilitator ) {
 				partial.facilitators = { [ facilitator ]: slot };
 			}
-			const { values: merged } = await save( partial );
+			if ( '' !== facilitator && '' !== pendingSecret ) {
+				partial.connector_secrets = { [ facilitator ]: pendingSecret };
+			}
+			const { values: merged, ajaxData } = await save( partial );
 			setFacilitator( merged.selected_facilitator_id || '' );
 			setSlots( merged.facilitators || {} );
-			await onFacilitatorSaveComplete( merged );
+			if ( ajaxData?.connectorCredentials ) {
+				setCredentials( ( prev ) => ( {
+					...prev,
+					...ajaxData.connectorCredentials,
+				} ) );
+			}
+			setPendingSecret( '' );
+			setReplaceOpen( false );
 		} );
 
 	const facilitatorSubtitle =
@@ -702,16 +811,22 @@ function FacilitatorCard( {
 									__next40pxDefaultSize
 									label={ __( 'Receiving wallet', 'simple-x402' ) }
 									placeholder={ __( 'Add a valid EVM address 0x...', 'simple-x402' ) }
-									help={ walletHelp }
+									help={
+										walletError ? (
+											<span
+												className="simple-x402-page__field-error"
+												role="alert"
+											>
+												{ walletError }
+											</span>
+										) : (
+											walletHelp
+										)
+									}
 									value={ walletValue }
 									onChange={ ( value ) => onWalletChange( { wallet_address: value } ) }
 									aria-invalid={ walletError ? 'true' : 'false' }
 								/>
-								{ walletError && (
-									<p className="simple-x402-page__wallet-error" role="alert">
-										{ walletError }
-									</p>
-								) }
 							</div>
 						) : (
 							<Text size={ 13 } variant="muted">
@@ -721,11 +836,136 @@ function FacilitatorCard( {
 								) }
 							</Text>
 						) }
+						{ apiKeyInputsVisible && (
+							<>
+								<div className="simple-x402-page__divider" />
+								<div className="simple-x402-page__api-keys">
+									{ adminMeta && (
+										<div className="simple-x402-page__api-keys-intro">
+											{ adminMeta.introHeadline && (
+												<Text size={ 13 }>{ adminMeta.introHeadline }</Text>
+											) }
+											{ adminMeta.introBody && (
+												<Text size={ 13 } variant="muted">
+													{ createInterpolateElement( adminMeta.introBody, {
+														docs: adminMeta.docsUrl ? (
+															<a
+																href={ adminMeta.docsUrl }
+																target="_blank"
+																rel="noopener noreferrer"
+															>
+																{ adminMeta.docsLinkText || adminMeta.docsUrl }
+															</a>
+														) : (
+															<span>{ adminMeta.docsLinkText || '' }</span>
+														),
+													} ) }
+												</Text>
+											) }
+										</div>
+									) }
+									<TextControl
+										__nextHasNoMarginBottom
+										__next40pxDefaultSize
+										label={ __( 'API key ID', 'simple-x402' ) }
+										placeholder={ adminMeta?.keyIdPlaceholder || '' }
+										help={
+											keyIdInvalid && adminMeta?.keyIdInvalidMessage ? (
+												<span
+													className="simple-x402-page__field-error"
+													role="alert"
+												>
+													{ adminMeta.keyIdInvalidMessage }
+												</span>
+											) : null
+										}
+										value={ slot.api_key_id || '' }
+										onChange={ ( value ) => onWalletChange( { api_key_id: value } ) }
+										aria-invalid={ keyIdInvalid ? 'true' : 'false' }
+									/>
+									<div className="simple-x402-page__api-key-secret">
+										<div className="components-base-control__label simple-x402-page__api-key-secret-label">
+											{ __( 'API key secret', 'simple-x402' ) }
+										</div>
+										{ ! secretEditable && credentialState.has_secret && (
+											<Text size={ 13 } variant="muted">
+												{ createInterpolateElement(
+													'env' === credentialState.source
+														? __(
+																'Set via the <code/> environment variable. Edit it on the server to change.',
+																'simple-x402'
+															)
+														: __(
+																'Set via the <code/> constant in wp-config.php. Edit it there to change.',
+																'simple-x402'
+															),
+													{
+														code: <code>{ credentialState.constant_name || '' }</code>,
+													}
+												) }
+											</Text>
+										) }
+										{ secretEditable && credentialState.has_secret && ! replaceOpen && (
+											<HStack spacing={ 2 } alignment="left" justify="flex-start">
+												<Text size={ 13 } variant="muted">
+													{ credentialState.saved_at_label
+														? sprintf(
+																/* translators: %s: human-readable save date. */
+																__( 'Key saved on %s.', 'simple-x402' ),
+																credentialState.saved_at_label
+															)
+														: __( 'Key saved.', 'simple-x402' ) }
+												</Text>
+												<Button
+													variant="link"
+													type="button"
+													onClick={ () => setReplaceOpen( true ) }
+												>
+													{ __( 'Replace key', 'simple-x402' ) }
+												</Button>
+											</HStack>
+										) }
+										{ secretInputShown && (
+											<TextareaControl
+												__nextHasNoMarginBottom
+												label={ __( 'API key secret', 'simple-x402' ) }
+												hideLabelFromVision
+												placeholder={ adminMeta?.keySecretPlaceholder || '' }
+												help={
+													secretInvalid && adminMeta?.keySecretInvalidMessage ? (
+														<span
+															className="simple-x402-page__field-error"
+															role="alert"
+														>
+															{ adminMeta.keySecretInvalidMessage }
+														</span>
+													) : (
+														createInterpolateElement(
+															__(
+																'For production sites, define <code/> in wp-config.php instead — the plugin reads that constant first and the secret never lands in the database.',
+																'simple-x402'
+															),
+															{
+																code: <code>{ credentialState.constant_name || '' }</code>,
+															}
+														)
+													)
+												}
+												rows={ 4 }
+												value={ pendingSecret }
+												onChange={ ( value ) => setPendingSecret( value ) }
+												aria-invalid={ secretInvalid ? 'true' : 'false' }
+											/>
+										) }
+									</div>
+								</div>
+							</>
+						) }
 					</>
 				) }
 			</CardBody>
 			<SaveFooter
-				disabled={ ! isDirty || walletHasInvalidFormat }
+				disabled={ ! isDirty || walletHasInvalidFormat || keyIdInvalid || secretInvalid }
 				saving={ saving }
 				error={ error }
 				onSave={ onSave }
@@ -768,13 +1008,6 @@ function SettingsApp() {
 		setRunChecksPending( false );
 		setFacilitatorCheck( null );
 		setPaywallCheck( null );
-	};
-
-	const beginPaywallSaveProbeSession = () => {
-		const rid = ++adminChecksRequestId.current;
-		setRunChecksPending( false );
-		setPaywallCheck( null );
-		return rid;
 	};
 
 	const runFacilitatorStepForRid = async ( rid, connectorId ) => {
@@ -843,13 +1076,31 @@ function SettingsApp() {
 		if ( ! probeBlock?.url || ! probeBlock?.nonce ) {
 			return;
 		}
-		if ( ! String( mergedSnapshot.selected_facilitator_id ?? '' ).trim() ) {
+		const connectorId = String( mergedSnapshot.selected_facilitator_id ?? '' ).trim();
+		if ( '' === connectorId ) {
 			if ( rid !== adminChecksRequestId.current ) {
 				return;
 			}
 			setPaywallCheck( {
 				infoMessage: __(
 					'Paywall probe skipped: choose a facilitator so the paywall can respond.',
+					'simple-x402'
+				),
+			} );
+			return;
+		}
+		const managedWalletIds = config.managedWalletFacilitators || [];
+		const slotForConnector = ( mergedSnapshot.facilitators || {} )[ connectorId ];
+		const walletConfigured =
+			managedWalletIds.includes( connectorId ) ||
+			'' !== String( slotForConnector?.wallet_address ?? '' ).trim();
+		if ( ! walletConfigured ) {
+			if ( rid !== adminChecksRequestId.current ) {
+				return;
+			}
+			setPaywallCheck( {
+				infoMessage: __(
+					'Paywall probe skipped: add a receiving wallet so the paywall has somewhere to send payments.',
 					'simple-x402'
 				),
 			} );
@@ -920,22 +1171,11 @@ function SettingsApp() {
 		}
 	};
 
-	const onFacilitatorSaveComplete = async ( merged ) => {
-		const rid = ++adminChecksRequestId.current;
-		setRunChecksPending( false );
-		setFacilitatorCheck( null );
-		const id = merged.selected_facilitator_id || '';
-		if ( ! id ) {
-			return;
-		}
-		await runFacilitatorStepForRid( rid, id );
-	};
-
 	// Shared save engine. Fires one AJAX call, merges the server-canonical
 	// response into `saved` so every card's isDirty check is evaluated against
 	// whatever the sanitizer actually stored (which may differ from what we
-	// sent, e.g. bad prices → 0.01). Returns `{ values, ajaxData }` so cards
-	// can run follow-up checks (e.g. paywall probe) without a second request.
+	// sent, e.g. bad prices → 0.01). Returns `{ values, ajaxData }` so the
+	// Run checks button can read fresh values without a second request.
 	const save = async ( partial ) => {
 		const data = await saveFields( partial );
 		let mergedValues;
@@ -972,14 +1212,6 @@ function SettingsApp() {
 		<div className="simple-x402-page__content">
 			<div className="simple-x402-page__notices" ref={ noticesRef } />
 			<VStack spacing={ 6 }>
-				<RunChecksCard
-					paywallDirty={ paywallDirty }
-					facilitatorDirty={ facilitatorDirty }
-					runChecksPending={ runChecksPending }
-					onRunChecks={ onRunChecks }
-					facilitatorCheck={ facilitatorCheck }
-					paywallCheck={ paywallCheck }
-				/>
 				<PaywallScopeCard
 					saved={ saved }
 					save={ save }
@@ -988,8 +1220,6 @@ function SettingsApp() {
 					termId={ termId }
 					setTermId={ setTermId }
 					onPaywallFieldsChange={ invalidateChecksFromFormEdit }
-					beginPaywallSaveProbeSession={ beginPaywallSaveProbeSession }
-					runPaywallProbeFollowThrough={ runPaywallProbeFollowThrough }
 				/>
 				<AudienceCard saved={ saved } save={ save } />
 				<PricingCard saved={ saved } save={ save } />
@@ -1001,7 +1231,14 @@ function SettingsApp() {
 					slots={ slots }
 					setSlots={ setSlots }
 					onFacilitatorFormChange={ invalidateChecksFromFormEdit }
-					onFacilitatorSaveComplete={ onFacilitatorSaveComplete }
+				/>
+				<RunChecksCard
+					paywallDirty={ paywallDirty }
+					facilitatorDirty={ facilitatorDirty }
+					runChecksPending={ runChecksPending }
+					onRunChecks={ onRunChecks }
+					facilitatorCheck={ facilitatorCheck }
+					paywallCheck={ paywallCheck }
 				/>
 			</VStack>
 		</div>

@@ -114,7 +114,10 @@ final class SettingsPageTest extends TestCase {
 
 		$this->assertSame( 'simple_x402_test', $boot['values']['selected_facilitator_id'] );
 		$this->assertSame(
-			array( 'wallet_address' => '0xabc' ),
+			array(
+				'wallet_address' => '0xabc',
+				'api_key_id'     => '',
+			),
 			$boot['values']['facilitators']['simple_x402_test']
 		);
 		$this->assertSame( '0.05', $boot['values']['default_price'] );

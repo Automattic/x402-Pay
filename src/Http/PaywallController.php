@@ -11,6 +11,7 @@ namespace SimpleX402\Http;
 
 use SimpleX402\Facilitator\Facilitator;
 use SimpleX402\Facilitator\FacilitatorResolver;
+use SimpleX402\Payment\PaymentProviderRegistry;
 use SimpleX402\Services\GrantStore;
 use SimpleX402\Services\PaywallClientProfile;
 use SimpleX402\Services\PaymentRequirementsBuilder;
@@ -64,6 +65,12 @@ final class PaywallController {
 	/** Request header carrying {@see self::PROBE_NONCE_ACTION} from the settings screen self-check. */
 	public const PROBE_HEADER = 'X-Simple-X402-Probe';
 
+	/** Response/request header carrying the opaque grant token after a successful payment. */
+	public const GRANT_HEADER = 'X-Payment-Grant';
+
+	/** Cookie name used to redeem the grant on subsequent requests from a browser. */
+	public const GRANT_COOKIE = 'sx402_grant';
+
 	/**
 	 * Lazily-resolved facilitator client + the builder that wraps its profile.
 	 * Deferred so requests that never reach the paywall path don't pay for
@@ -74,6 +81,8 @@ final class PaywallController {
 
 	private ?PaymentSettlementNotifier $settlement_notifier;
 
+	private PaymentProviderRegistry $providers;
+
 	/** Set on the paywall enforcement path for Phase B; unused in Phase A beyond {@see self::CLIENT_PROFILE_FILTER}. */
 	private ?PaywallClientProfile $client_profile = null;
 
@@ -83,8 +92,10 @@ final class PaywallController {
 		private readonly SettingsRepository $settings,
 		private readonly FacilitatorResolver $resolver,
 		?PaymentSettlementNotifier $settlement_notifier = null,
+		?PaymentProviderRegistry $providers = null,
 	) {
 		$this->settlement_notifier = $settlement_notifier;
+		$this->providers           = $providers ?? new PaymentProviderRegistry();
 	}
 
 	private function settlement_notifier(): PaymentSettlementNotifier {
@@ -161,8 +172,8 @@ final class PaywallController {
 			return;
 		}
 
-		$wallet_hint = (string) ( $request['headers']['X-Wallet-Address'] ?? '' );
-		if ( '' !== $wallet_hint && $this->grants->has_grant( $wallet_hint, $request['path'] ) ) {
+		$grant_token = $this->extract_grant_token( $request );
+		if ( '' !== $grant_token && $this->grants->redeem( $grant_token, $request['path'] ) ) {
 			return;
 		}
 
@@ -217,16 +228,16 @@ final class PaywallController {
 		}
 
 		$wallet = $this->extract_wallet( $payload );
-		if ( '' === $wallet ) {
-			$wallet = $wallet_hint;
-		}
-		if ( '' !== $wallet ) {
-			$this->grants->issue(
-				$wallet,
-				$request['path'],
-				$rule['ttl'],
-				array( 'transaction' => $settle['transaction'] )
-			);
+		$token  = $this->grants->issue(
+			$request['path'],
+			$rule['ttl'],
+			array(
+				'transaction' => $settle['transaction'] ?? null,
+				'wallet'      => $wallet,
+			)
+		);
+		if ( '' !== $token ) {
+			$this->emit_grant_response_headers( $token, $request['path'], $rule['ttl'] );
 		}
 
 		$this->settlement_notifier()->notify(
@@ -308,9 +319,18 @@ final class PaywallController {
 			? '<p class="sx402-error"><code>' . esc_html( $error_code ) . '</code></p>'
 			: '';
 
+		$providers_block = $this->payment_providers_block( $request, $requirements );
+		$hint_line       = '' !== $providers_block
+			? '' // The CTA replaces the developer-facing hint.
+			: '<p class="sx402-hint">'
+				. esc_html__( 'x402 payment instructions are in the PAYMENT-REQUIRED HTTP response header.', 'simple-x402' )
+				. '</p>';
+
 		$html = '<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><title>'
 			. esc_html__( 'Payment required', 'simple-x402' )
-			. '</title></head><body><main><h1>'
+			. '</title>'
+			. $this->html_402_styles()
+			. '</head><body><main><h1>'
 			. esc_html__( 'Payment required', 'simple-x402' )
 			. '</h1>'
 			. $site
@@ -320,13 +340,101 @@ final class PaywallController {
 				/* translators: %s: USDC price (decimal string). */
 				sprintf( __( 'Price: %s USDC', 'simple-x402' ), $price )
 			)
-			. '</p><p class="sx402-hint">'
-			. esc_html__( 'x402 payment instructions are in the PAYMENT-REQUIRED HTTP response header.', 'simple-x402' )
 			. '</p>'
+			. $providers_block
+			. $hint_line
 			. $error_line
 			. '</main></body></html>';
 
 		return (string) apply_filters( self::HTML_402_BODY_FILTER, $html, $request, $requirements, $price, $body );
+	}
+
+	/**
+	 * Render the payment-provider buttons block. Each eligible provider gets a
+	 * `<div data-sx402-provider="…">` slot plus a `<script src="…">` tag; the
+	 * host loader walks the slots once registrations are in. Returns an empty
+	 * string if no providers are eligible, so the controller falls back to the
+	 * developer-facing PAYMENT-REQUIRED hint.
+	 *
+	 * @param array<string,mixed> $request
+	 * @param array<string,mixed> $requirements
+	 */
+	private function payment_providers_block( array $request, array $requirements ): string {
+		// `add_query_arg( array() )` returns the current request URI (path + query
+		// string), so the retry hits the exact URL that 402'd — critical when the
+		// site uses Plain permalinks and posts are addressed via `?p=<id>`.
+		$resource_url = home_url( add_query_arg( array() ) );
+
+		$providers = $this->providers->eligible(
+			array(
+				'requirements' => $requirements,
+				'resource_url' => $resource_url,
+				'request'      => $request,
+			)
+		);
+		if ( empty( $providers ) ) {
+			return '';
+		}
+
+		$context        = array(
+			'requirements' => $requirements,
+			'resourceUrl'  => $resource_url,
+			'providers'    => array(),
+		);
+		$slots          = '';
+		$script_tags    = '';
+		$seen_providers = array();
+		foreach ( $providers as $provider ) {
+			$id = $provider['id'];
+			if ( isset( $seen_providers[ $id ] ) ) {
+				continue;
+			}
+			$seen_providers[ $id ] = true;
+
+			$context['providers'][ $id ] = array(
+				'config' => $provider['config'],
+			);
+			$slots                      .= '<div data-sx402-provider="' . esc_attr( $id ) . '"></div>';
+			$script_tags                .= '<script defer src="' . esc_url( $provider['script_url'] ) . '"></script>';
+		}
+
+		$context_json = wp_json_encode(
+			$context,
+			JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_HEX_TAG
+		);
+		if ( false === $context_json ) {
+			return '';
+		}
+
+		$status   = esc_html__( 'Choose a payment method to continue.', 'simple-x402' );
+		$host_url = plugins_url( 'src/Payment/loader.js', SIMPLE_X402_FILE );
+
+		return '<div class="sx402-checkout">'
+			. '<div class="sx402-providers">' . $slots . '</div>'
+			. '<p id="sx402-status" class="sx402-status">' . $status . '</p>'
+			. '<script type="application/json" id="sx402-payment-context">' . $context_json . '</script>'
+			. '<script defer src="' . esc_url( $host_url ) . '"></script>'
+			. $script_tags
+			. '</div>';
+	}
+
+	private function html_402_styles(): string {
+		return <<<'CSS'
+<style>
+	body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif; max-width: 540px; margin: 4rem auto; padding: 0 1rem; color: #1d1d1f; }
+	h1 { font-size: 22px; }
+	.sx402-site { color: #6e6e73; margin: 4px 0 16px; font-size: 14px; }
+	.sx402-excerpt { color: #444; margin: 12px 0 20px; }
+	.sx402-price { font-size: 15px; margin: 16px 0; }
+	.sx402-checkout { margin: 20px 0; }
+	.sx402-providers { display: flex; flex-direction: column; gap: 8px; }
+	.sx402-pay-button { font: inherit; font-size: 15px; padding: 10px 20px; border: 0; background: linear-gradient(135deg, #ff8a4c 0%, #ff5c3a 100%); color: white; border-radius: 8px; cursor: pointer; }
+	.sx402-pay-button:disabled { opacity: 0.6; cursor: not-allowed; }
+	.sx402-status { color: #6e6e73; font-size: 13px; margin: 10px 0 0; }
+	.sx402-hint, .sx402-error { color: #6e6e73; font-size: 13px; }
+	.sx402-error code { background: #fef2f2; padding: 2px 6px; border-radius: 4px; }
+</style>
+CSS;
 	}
 
 	private function paywall_excerpt_fragment( int $post_id ): string {
@@ -354,6 +462,48 @@ final class PaywallController {
 			return $stripped;
 		}
 		return implode( ' ', array_slice( $words, 0, 55 ) ) . '…';
+	}
+
+	/**
+	 * Extract the opaque grant token from either the request header (CLI /
+	 * scripts that capture the response header explicitly) or the
+	 * `sx402_grant` cookie (browsers, sent automatically once issued).
+	 *
+	 * @param array{headers:array<string,string>} $request
+	 */
+	private function extract_grant_token( array $request ): string {
+		$header = (string) ( $request['headers'][ self::GRANT_HEADER ] ?? '' );
+		if ( '' !== $header ) {
+			return $header;
+		}
+		// $_COOKIE is the only authoritative source — Plugin::collect_headers
+		// doesn't fold cookies into the request shape (and shouldn't: cookies
+		// have their own semantics).
+		$raw = $_COOKIE[ self::GRANT_COOKIE ] ?? '';
+		return is_string( $raw ) ? (string) wp_unslash( $raw ) : '';
+	}
+
+	/**
+	 * Stage the response header + Set-Cookie for a freshly-issued grant on
+	 * the success-path response struct so {@see \SimpleX402\Plugin} can
+	 * emit them before WordPress renders the page.
+	 *
+	 * The cookie is `Secure; HttpOnly; SameSite=Strict` and `Max-Age` matches
+	 * the rule TTL so the bypass disappears together with the server-side
+	 * transient. `Path` is scoped to the paid URL so an unrelated path on
+	 * the same site can't accidentally redeem it.
+	 */
+	private function emit_grant_response_headers( string $token, string $path, int $ttl ): void {
+		$cookie_path = '' !== $path ? $path : '/';
+		$cookie      = sprintf(
+			'%s=%s; Max-Age=%d; Path=%s; Secure; HttpOnly; SameSite=Strict',
+			self::GRANT_COOKIE,
+			rawurlencode( $token ),
+			max( $ttl, 0 ),
+			$cookie_path
+		);
+		$GLOBALS['__sx402_response']['success_headers'][] = self::GRANT_HEADER . ': ' . $token;
+		$GLOBALS['__sx402_response']['success_headers'][] = 'Set-Cookie: ' . $cookie;
 	}
 
 	/**

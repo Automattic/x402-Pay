@@ -14,11 +14,13 @@ use SimpleX402\Admin\PaywallProbeAjax;
 use SimpleX402\Admin\SettingsAjax;
 use SimpleX402\Admin\SettingsPage;
 use SimpleX402\Admin\TestConnectionAjax;
+use SimpleX402\Connectors\Coinbase\Registrar as CoinbaseRegistrar;
 use SimpleX402\Connectors\ConnectorRegistry;
 use SimpleX402\Connectors\TestConnectorRegistrar;
 use SimpleX402\Facilitator\FacilitatorResolver;
 use SimpleX402\Services\FacilitatorHooks;
 use SimpleX402\Http\PaywallController;
+use SimpleX402\Payment\Providers\GravatarWallet\Provider as GravatarWalletProvider;
 use SimpleX402\Services\AllPostsModeNoticeEmitter;
 use SimpleX402\Services\BotDetector;
 use SimpleX402\Services\CategoryRepository;
@@ -44,9 +46,6 @@ final class Plugin {
 	 */
 	private const FACILITATOR_AUTOPICKED_OPTION = 'simple_x402_facilitator_autopicked';
 
-	/** Must match {@see \SimpleX402\Jetpack\ConnectorRegistrar::ID}. */
-	private const WPCOM_X402_CONNECTOR_ID = 'wpcom_x402';
-
 	/**
 	 * Bootstrap the plugin. Idempotent — safe to call at most once per request.
 	 */
@@ -71,6 +70,8 @@ final class Plugin {
 
 		add_filter( RuleResolver::HOOK, $default_rule, 10, 2 );
 
+		GravatarWalletProvider::register();
+
 		$indicator->register();
 
 		add_action(
@@ -90,6 +91,21 @@ final class Plugin {
 		add_filter(
 			'simple_x402_facilitator_for_connector',
 			array( $test_connector, 'provide_facilitator' ),
+			10,
+			2
+		);
+
+		$coinbase_connector = new CoinbaseRegistrar();
+		add_action( 'wp_connectors_init', $coinbase_connector );
+		add_filter(
+			'simple_x402_facilitator_for_connector',
+			array( $coinbase_connector, 'provide_facilitator' ),
+			10,
+			2
+		);
+		add_filter(
+			FacilitatorHooks::CONNECTOR_ADMIN_META,
+			array( $coinbase_connector, 'provide_admin_meta' ),
 			10,
 			2
 		);
@@ -131,6 +147,13 @@ final class Plugin {
 						'headers'  => self::collect_headers(),
 					)
 				);
+
+				// Success-path headers (e.g. X-Payment-Grant + Set-Cookie after
+				// a paid request) are flushed even when the controller hands
+				// off to WordPress to render the page normally.
+				foreach ( $GLOBALS['__sx402_response']['success_headers'] ?? array() as $line ) {
+					header( (string) $line, false );
+				}
 
 				if ( ! empty( $GLOBALS['__sx402_response']['exited'] ) ) {
 					foreach ( $GLOBALS['__sx402_response']['headers'] as $name => $value ) {
@@ -182,15 +205,10 @@ final class Plugin {
 	}
 
 	/**
-	 * Prefer WordPress.com when the connector exists and Jetpack reports connected;
-	 * otherwise fall back to the built-in test facilitator.
+	 * Use the built-in test facilitator when registered.
 	 */
 	private static function preferred_autopick_connector_id( ConnectorRegistry $connectors ): string {
 		$map = $connectors->facilitators();
-		if ( array_key_exists( self::WPCOM_X402_CONNECTOR_ID, $map )
-			&& (bool) apply_filters( FacilitatorHooks::IS_JETPACK_SITE_CONNECTED, false ) ) {
-			return self::WPCOM_X402_CONNECTOR_ID;
-		}
 		if ( array_key_exists( TestConnectorRegistrar::ID, $map ) ) {
 			return TestConnectorRegistrar::ID;
 		}

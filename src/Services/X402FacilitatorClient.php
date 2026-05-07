@@ -11,15 +11,16 @@ namespace SimpleX402\Services;
 
 use SimpleX402\Facilitator\Facilitator;
 use SimpleX402\Facilitator\TestResult;
+use Throwable;
 
 /**
  * Posts PaymentRequirements + PaymentPayload bodies to a facilitator's
  * /verify and /settle endpoints using wp_remote_post.
  *
- * Endpoint URL and optional bearer authorization come from the injected
- * FacilitatorProfile. The public x402.org facilitator is used in test mode
- * (no auth); live mode typically targets a commercial facilitator (e.g.
- * Coinbase CDP) that requires an API key.
+ * Authentication is delegated to the optional {@see \SimpleX402\Facilitator\RequestSigner}
+ * carried by the profile — the client never knows which scheme is in play
+ * (no auth, static bearer, signed JWT, …) and just merges whatever headers
+ * the signer returns into each outbound request.
  */
 final class X402FacilitatorClient implements Facilitator {
 
@@ -81,18 +82,39 @@ final class X402FacilitatorClient implements Facilitator {
 	}
 
 	/**
-	 * Probe the facilitator base URL to see if it's reachable. Does not
-	 * attempt a real verify — this is the admin UI's "is the connection alive"
-	 * button. Any HTTP response (including 4xx) counts as reachable; only
-	 * network errors and 5xx count as down.
+	 * Probe the facilitator to see if the configured credentials work.
+	 *
+	 * For authenticated profiles (signer present) this is a signed GET against
+	 * `/supported`, so a green check actually means "auth passes." For
+	 * unauthenticated facilitators we fall back to a HEAD against the base
+	 * URL — any non-5xx counts as reachable.
 	 */
 	public function test_connection(): TestResult {
-		$base    = rtrim( $this->profile->facilitator_url, '/' ) . '/';
+		$base    = rtrim( $this->profile->facilitator_url, '/' );
 		$started = microtime( true );
-		$raw     = wp_remote_head(
-			$base,
-			array( 'timeout' => self::PROBE_TIMEOUT )
-		);
+
+		if ( null === $this->profile->signer ) {
+			$raw = wp_remote_head( $base . '/', array( 'timeout' => self::PROBE_TIMEOUT ) );
+		} else {
+			try {
+				$auth_headers = $this->profile->signer->sign( 'GET', $base . '/supported' );
+			} catch ( Throwable $e ) {
+				return new TestResult(
+					ok: false,
+					error: $e->getMessage(),
+					duration_ms: (int) round( ( microtime( true ) - $started ) * 1000 ),
+				);
+			}
+			$raw = wp_remote_request(
+				$base . '/supported',
+				array(
+					'method'  => 'GET',
+					'timeout' => self::PROBE_TIMEOUT,
+					'headers' => array_merge( array( 'Accept' => 'application/json' ), $auth_headers ),
+				)
+			);
+		}
+
 		$elapsed = (int) round( ( microtime( true ) - $started ) * 1000 );
 
 		if ( is_wp_error( $raw ) ) {
@@ -107,6 +129,17 @@ final class X402FacilitatorClient implements Facilitator {
 			return new TestResult(
 				ok: false,
 				error: 0 === $code ? 'No response' : "HTTP {$code}",
+				http_code: $code,
+				duration_ms: $elapsed,
+			);
+		}
+		// For authenticated probes, 401/403 means the signer's credentials
+		// were rejected — that's an auth failure, not a "reachable but quirky"
+		// success. Unauthenticated probes pass through to the success path.
+		if ( null !== $this->profile->signer && in_array( $code, array( 401, 403 ), true ) ) {
+			return new TestResult(
+				ok: false,
+				error: "HTTP {$code} — credentials rejected",
 				http_code: $code,
 				duration_ms: $elapsed,
 			);
@@ -131,13 +164,22 @@ final class X402FacilitatorClient implements Facilitator {
 			'Content-Type' => 'application/json',
 			'Accept'       => 'application/json',
 		);
-		if ( '' !== $this->profile->api_key ) {
-			$headers['Authorization'] = 'Bearer ' . $this->profile->api_key;
+		$base = rtrim( $this->profile->facilitator_url, '/' ) . '/';
+		$url  = $base . ltrim( $endpoint, '/' );
+
+		if ( null !== $this->profile->signer ) {
+			try {
+				$headers = array_merge( $headers, $this->profile->signer->sign( 'POST', $url ) );
+			} catch ( Throwable $e ) {
+				return array(
+					'body'  => array(),
+					'error' => $e->getMessage(),
+				);
+			}
 		}
 
-		$base = rtrim( $this->profile->facilitator_url, '/' ) . '/';
-		$raw  = wp_remote_post(
-			$base . ltrim( $endpoint, '/' ),
+		$raw = wp_remote_post(
+			$url,
 			array(
 				'timeout' => self::TIMEOUT,
 				'headers' => $headers,
