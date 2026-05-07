@@ -7,6 +7,7 @@ import {
 	CardFooter,
 	CardHeader,
 	TextControl,
+	TextareaControl,
 	__experimentalHStack as HStack,
 	__experimentalVStack as VStack,
 	__experimentalText as Text,
@@ -20,6 +21,35 @@ const config = window.simpleX402Settings;
 const boltIcon = (
 	<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" focusable="false">
 		<path d="M13 2 4 14h7l-1 8 9-12h-7l1-8z" fill="currentColor" />
+	</svg>
+);
+
+const spinnerIcon = (
+	<svg
+		xmlns="http://www.w3.org/2000/svg"
+		viewBox="0 0 24 24"
+		width="16"
+		height="16"
+		aria-hidden="true"
+		focusable="false"
+		className="simple-x402-spinner-icon"
+	>
+		<circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="2" fill="none" strokeOpacity="0.25" />
+		<path d="M12 3 A9 9 0 0 1 21 12" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" />
+	</svg>
+);
+
+const clockIcon = (
+	<svg
+		xmlns="http://www.w3.org/2000/svg"
+		viewBox="0 0 24 24"
+		width="16"
+		height="16"
+		aria-hidden="true"
+		focusable="false"
+	>
+		<circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="2" fill="none" />
+		<path d="M12 7 v5 l3 2" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round" />
 	</svg>
 );
 
@@ -143,155 +173,41 @@ async function runFacilitatorConnectivityAjax( connectorId ) {
 }
 
 /**
- * Ask the Gravatar Wallet service who's logged in (if anyone).
- * Hits the prototype directly from the browser with credentials so the
- * user's session cookie travels along. Returns null on 401 / network error.
- *
- * @param {string} endpoint Base URL of the Gravatar Wallet service.
- * @returns {Promise<null | { walletAddress: string, displayName: string, avatarUrl: string, email: string }>}
- */
-async function fetchGravatarSession( endpoint ) {
-	try {
-		const resp = await fetch( endpoint.replace( /\/$/, '' ) + '/me', {
-			credentials: 'include',
-			headers: { Accept: 'application/json' },
-		} );
-		if ( ! resp.ok ) return null;
-		const data = await resp.json();
-		return data?.walletAddress ? data : null;
-	} catch ( _ ) {
-		return null;
-	}
-}
-
-/**
- * Auto-detected "Connected to Gravatar" UI. If the admin's browser already
- * has a Gravatar session, show their avatar + name + "Use this wallet".
- * If not, show "Sign in to Gravatar" which opens the Gravatar Wallet
- * service in a new tab; on focus return we re-check the session.
- *
- * @param {object} props
- * @param {(addr: string) => void} props.onAddress Called when the admin clicks Use this wallet.
- */
-function GravatarConnect( { onAddress } ) {
-	const endpoint = config.gravatarLookup?.endpoint || '';
-	const [ state, setState ] = useState( { kind: 'detecting' } );
-	const [ filled, setFilled ] = useState( false );
-
-	const refresh = async () => {
-		setState( { kind: 'detecting' } );
-		const me = await fetchGravatarSession( endpoint );
-		setState( me ? { kind: 'connected', user: me } : { kind: 'anon' } );
-	};
-
-	useEffect( () => {
-		if ( ! endpoint ) {
-			setState( { kind: 'disabled' } );
-			return;
-		}
-		refresh();
-		// If the admin signed in via the popup tab, re-check on focus return.
-		const onFocus = () => refresh();
-		window.addEventListener( 'focus', onFocus );
-		return () => window.removeEventListener( 'focus', onFocus );
-		// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, [ endpoint ] );
-
-	if ( state.kind === 'disabled' ) return null;
-
-	if ( state.kind === 'detecting' ) {
-		return (
-			<div className="simple-x402-page__gravatar-lookup">
-				<Text size={ 13 } variant="muted">
-					{ __( 'Checking Gravatar session…', 'simple-x402' ) }
-				</Text>
-			</div>
-		);
-	}
-
-	if ( state.kind === 'anon' ) {
-		const loginUrl = endpoint.replace( /\/$/, '' ) + '/login?next=/login%3Fdone=1';
-		return (
-			<div className="simple-x402-page__gravatar-lookup">
-				<HStack spacing={ 2 } alignment="center">
-					<Button
-						variant="secondary"
-						type="button"
-						href={ loginUrl }
-						target="_blank"
-						rel="noopener noreferrer"
-					>
-						{ __( 'Sign in to Gravatar', 'simple-x402' ) }
-					</Button>
-					<Text size={ 13 } variant="muted">
-						{ __(
-							'Use the wallet attached to your Gravatar profile. Come back to this tab after signing in.',
-							'simple-x402'
-						) }
-					</Text>
-				</HStack>
-			</div>
-		);
-	}
-
-	// Connected
-	const { user } = state;
-	const short = user.walletAddress.slice( 0, 6 ) + '…' + user.walletAddress.slice( -4 );
-	const useWallet = () => {
-		onAddress( user.walletAddress );
-		setFilled( true );
-	};
-
-	return (
-		<div className="simple-x402-page__gravatar-lookup">
-			<HStack spacing={ 3 } alignment="center">
-				{ user.avatarUrl && (
-					<img
-						src={ user.avatarUrl }
-						alt=""
-						width={ 36 }
-						height={ 36 }
-						style={ { borderRadius: '50%' } }
-					/>
-				) }
-				<VStack spacing={ 0 } style={ { flex: 1 } }>
-					<Text size={ 13 } weight={ 600 }>
-						{ sprintf(
-							/* translators: %s: Gravatar display name. */
-							__( 'Connected as %s', 'simple-x402' ),
-							user.displayName || user.email
-						) }
-					</Text>
-					<Text size={ 12 } variant="muted">
-						{ short }
-					</Text>
-				</VStack>
-				<Button variant="secondary" type="button" onClick={ useWallet } disabled={ filled }>
-					{ filled
-						? __( '✓ Filled', 'simple-x402' )
-						: __( 'Use this wallet', 'simple-x402' ) }
-				</Button>
-			</HStack>
-		</div>
-	);
-}
-
-/**
  * Shared result line for unified Run checks (facilitator connectivity + paywall probe).
  *
  * @param {object} props
  * @param {boolean} props.pending
+ * @param {boolean} [props.awaiting] Run checks is in progress but this
+ *                                   particular step hasn't started — render
+ *                                   a placeholder so the row holds its space.
  * @param {boolean} [props.success]
  * @param {number} [props.durationMs]
  * @param {string} [props.failureMessage]
  * @param {string} [props.infoMessage] Skipped / informational (no ✓/✗).
  */
-function DiagnosticProbeLine( { pending, success, durationMs, failureMessage, infoMessage } ) {
+function DiagnosticProbeLine( { pending, awaiting, success, durationMs, failureMessage, infoMessage } ) {
 	if ( pending ) {
 		return (
-			<Text size={ 13 } variant="muted">
-				{ __( 'Running check…', 'simple-x402' ) }
-			</Text>
+			<HStack spacing={ 1 } alignment="left" justify="flex-start">
+				<span className="simple-x402-page__inline-spinner" aria-hidden="true">
+					{ spinnerIcon }
+				</span>
+				<Text size={ 13 } variant="muted">
+					{ __( 'Running check…', 'simple-x402' ) }
+				</Text>
+			</HStack>
+		);
+	}
+	if ( awaiting ) {
+		return (
+			<HStack spacing={ 1 } alignment="left" justify="flex-start">
+				<span className="simple-x402-page__inline-spinner" aria-hidden="true">
+					{ clockIcon }
+				</span>
+				<Text size={ 13 } variant="muted">
+					{ __( 'Waiting for the previous step to finish…', 'simple-x402' ) }
+				</Text>
+			</HStack>
 		);
 	}
 	if ( infoMessage ) {
@@ -453,25 +369,6 @@ function RunChecksCard( {
 			</CardHeader>
 			<CardBody>
 				<VStack spacing={ 3 }>
-					<HStack spacing={ 3 } justify="flex-start" className="simple-x402-page__probe-row">
-						<Button
-							variant="primary"
-							size="compact"
-							type="button"
-							icon={ boltIcon }
-							iconSize={ 16 }
-							onClick={ onRunChecks }
-							disabled={
-								paywallDirty || facilitatorDirty || runChecksPending
-							}
-							accessibleWhenDisabled
-							aria-busy={ runChecksPending }
-						>
-							{ runChecksPending
-								? __( 'Running checks…', 'simple-x402' )
-								: __( 'Run checks', 'simple-x402' ) }
-						</Button>
-					</HStack>
 					{ facilitatorDirty && (
 						<Text size={ 13 } variant="muted">
 							{ __(
@@ -491,11 +388,12 @@ function RunChecksCard( {
 					{ showSteps && (
 						<VStack spacing={ 3 }>
 							<VStack spacing={ 0 } className="simple-x402-page__run-checks-step">
-								<Text size={ 12 } weight={ 600 } variant="muted">
+								<Text size={ 12 } weight={ 600 }>
 									{ __( '1. Facilitator connectivity', 'simple-x402' ) }
 								</Text>
 								<DiagnosticProbeLine
 									pending={ facilitatorCheck?.pending === true }
+									awaiting={ runChecksPending && facilitatorCheck == null }
 									success={ facilitatorCheck?.success === true }
 									durationMs={ facilitatorCheck?.durationMs }
 									failureMessage={ facilitatorCheck?.failureMessage }
@@ -503,11 +401,12 @@ function RunChecksCard( {
 								/>
 							</VStack>
 							<VStack spacing={ 0 } className="simple-x402-page__run-checks-step">
-								<Text size={ 12 } weight={ 600 } variant="muted">
+								<Text size={ 12 } weight={ 600 }>
 									{ __( '2. Paywall live probe', 'simple-x402' ) }
 								</Text>
 								<DiagnosticProbeLine
 									pending={ paywallCheck?.pending === true }
+									awaiting={ runChecksPending && paywallCheck == null }
 									success={ paywallCheck?.success === true }
 									durationMs={ paywallCheck?.durationMs }
 									failureMessage={ paywallCheck?.failureMessage }
@@ -516,6 +415,25 @@ function RunChecksCard( {
 							</VStack>
 						</VStack>
 					) }
+					<HStack spacing={ 3 } justify="flex-start" className="simple-x402-page__probe-row">
+						<Button
+							variant="primary"
+							size="compact"
+							type="button"
+							icon={ boltIcon }
+							iconSize={ 16 }
+							onClick={ onRunChecks }
+							disabled={
+								paywallDirty || facilitatorDirty || runChecksPending
+							}
+							accessibleWhenDisabled
+							aria-busy={ runChecksPending }
+						>
+							{ runChecksPending
+								? __( 'Running checks…', 'simple-x402' )
+								: __( 'Run checks', 'simple-x402' ) }
+						</Button>
+					</HStack>
 				</VStack>
 			</CardBody>
 		</Card>
@@ -712,11 +630,26 @@ const FACILITATOR_FIELDS = [
 // characters, which is what local validation is for.
 const WALLET_RE = /^0x[0-9a-fA-F]{40}$/;
 
-/** @see https://ethereum.org/guides/how-to-create-an-ethereum-account/ */
-const ETHEREUM_ACCOUNT_GUIDE_URL =
-	'https://ethereum.org/guides/how-to-create-an-ethereum-account/';
+// CDP API key IDs are UUIDs (8-4-4-4-12 lowercase hex).
+const CDP_KEY_ID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-const emptySlot = () => ( { wallet_address: '' } );
+// Loose sanity check: base64 alphabet (incl. URL-safe variant) plus padding,
+// minimum 40 characters. Catches partial pastes / wrong field; the real
+// check is Coinbase rejecting the JWT on first verify.
+const CDP_KEY_SECRET_RE = /^[A-Za-z0-9+/_=-]{40,}$/;
+
+const METAMASK_URL = 'https://metamask.io/';
+
+const CDP_DOCS_URL =
+	'https://docs.cdp.coinbase.com/api-reference/v2/authentication#secret-api-key';
+
+const emptySlot = () => ( { wallet_address: '', api_key_id: '' } );
+
+const EMPTY_CREDENTIAL_STATE = {
+	has_secret: false,
+	source: 'none',
+	is_writable: true,
+};
 
 function FacilitatorCard( {
 	saved,
@@ -738,6 +671,33 @@ function FacilitatorCard( {
 
 	const managedWalletIds = config.managedWalletFacilitators || [];
 	const walletInputVisible = '' === facilitator || ! managedWalletIds.includes( facilitator );
+	const apiKeyIds = config.apiKeyFacilitators || [];
+	const apiKeyInputsVisible = '' !== facilitator && apiKeyIds.includes( facilitator );
+
+	const [ credentials, setCredentials ] = useState( config.connectorCredentials || {} );
+	const [ pendingSecret, setPendingSecret ] = useState( '' );
+	const [ replaceOpen, setReplaceOpen ] = useState( false );
+
+	useEffect( () => {
+		setPendingSecret( '' );
+		setReplaceOpen( false );
+	}, [ facilitator ] );
+
+	const credentialState =
+		'' !== facilitator && credentials[ facilitator ]
+			? credentials[ facilitator ]
+			: EMPTY_CREDENTIAL_STATE;
+	const secretEditable =
+		apiKeyInputsVisible && credentialState.is_writable;
+	const secretInputShown =
+		secretEditable && ( ! credentialState.has_secret || replaceOpen );
+
+	const trimmedKeyId = ( slot.api_key_id || '' ).trim();
+	const keyIdInvalid =
+		apiKeyInputsVisible && '' !== trimmedKeyId && ! CDP_KEY_ID_RE.test( trimmedKeyId );
+	const trimmedSecret = pendingSecret.trim();
+	const secretInvalid =
+		secretInputShown && '' !== trimmedSecret && ! CDP_KEY_SECRET_RE.test( trimmedSecret );
 
 	const walletValue = slot.wallet_address || '';
 	const trimmedWallet = walletValue.trim();
@@ -750,13 +710,13 @@ function FacilitatorCard( {
 		'' !== facilitator && walletInputVisible
 			? createInterpolateElement(
 					__(
-						'Required to accept payments. <a>How to create an Ethereum account</a> — guide on ethereum.org.',
+						'Have a wallet? Paste its public 0x address. New to crypto? Create one with <a>MetaMask</a>.',
 						'simple-x402'
 					),
 					{
 						a: (
 							<a
-								href={ ETHEREUM_ACCOUNT_GUIDE_URL }
+								href={ METAMASK_URL }
 								target="_blank"
 								rel="noopener noreferrer"
 							/>
@@ -767,7 +727,8 @@ function FacilitatorCard( {
 
 	const isDirty =
 		facilitator !== savedId ||
-		( '' !== facilitator && ! isShallowEqual( slot, savedSlot ) );
+		( '' !== facilitator && ! isShallowEqual( slot, savedSlot ) ) ||
+		'' !== pendingSecret;
 
 	const onWalletChange = ( edits ) => {
 		setSlots( {
@@ -782,9 +743,20 @@ function FacilitatorCard( {
 			if ( '' !== facilitator ) {
 				partial.facilitators = { [ facilitator ]: slot };
 			}
-			const { values: merged } = await save( partial );
+			if ( '' !== facilitator && '' !== pendingSecret ) {
+				partial.connector_secrets = { [ facilitator ]: pendingSecret };
+			}
+			const { values: merged, ajaxData } = await save( partial );
 			setFacilitator( merged.selected_facilitator_id || '' );
 			setSlots( merged.facilitators || {} );
+			if ( ajaxData?.connectorCredentials ) {
+				setCredentials( ( prev ) => ( {
+					...prev,
+					...ajaxData.connectorCredentials,
+				} ) );
+			}
+			setPendingSecret( '' );
+			setReplaceOpen( false );
 			await onFacilitatorSaveComplete( merged );
 		} );
 
@@ -836,21 +808,22 @@ function FacilitatorCard( {
 									__next40pxDefaultSize
 									label={ __( 'Receiving wallet', 'simple-x402' ) }
 									placeholder={ __( 'Add a valid EVM address 0x...', 'simple-x402' ) }
-									help={ walletHelp }
+									help={
+										walletError ? (
+											<span
+												className="simple-x402-page__field-error"
+												role="alert"
+											>
+												{ walletError }
+											</span>
+										) : (
+											walletHelp
+										)
+									}
 									value={ walletValue }
 									onChange={ ( value ) => onWalletChange( { wallet_address: value } ) }
 									aria-invalid={ walletError ? 'true' : 'false' }
 								/>
-								{ walletError && (
-									<p className="simple-x402-page__wallet-error" role="alert">
-										{ walletError }
-									</p>
-								) }
-								{ config.gravatarLookup?.endpoint && (
-									<GravatarConnect
-										onAddress={ ( addr ) => onWalletChange( { wallet_address: addr } ) }
-									/>
-								) }
 							</div>
 						) : (
 							<Text size={ 13 } variant="muted">
@@ -860,11 +833,149 @@ function FacilitatorCard( {
 								) }
 							</Text>
 						) }
+						{ apiKeyInputsVisible && (
+							<>
+								<div className="simple-x402-page__divider" />
+								<div className="simple-x402-page__api-keys">
+									<div className="simple-x402-page__api-keys-intro">
+										<Text size={ 13 }>
+											{ __(
+												'Connect this site to Coinbase to accept USDC payments on Base mainnet.',
+												'simple-x402'
+											) }
+										</Text>
+										<Text size={ 13 } variant="muted">
+											{ createInterpolateElement(
+												__(
+													'Read the <docs>guide on creating your API keys</docs>, then paste the two values it gives you below.',
+													'simple-x402'
+												),
+												{
+													docs: (
+														<a
+															href={ CDP_DOCS_URL }
+															target="_blank"
+															rel="noopener noreferrer"
+														/>
+													),
+												}
+											) }
+										</Text>
+									</div>
+									<TextControl
+										__nextHasNoMarginBottom
+										__next40pxDefaultSize
+										label={ __( 'API key ID', 'simple-x402' ) }
+										placeholder={ __(
+											'00000000-0000-0000-0000-000000000000',
+											'simple-x402'
+										) }
+										help={
+											keyIdInvalid ? (
+												<span
+													className="simple-x402-page__field-error"
+													role="alert"
+												>
+													{ __(
+														'Doesn’t look like a UUID. Copy the value labelled “API Key ID” in the CDP Portal.',
+														'simple-x402'
+													) }
+												</span>
+											) : null
+										}
+										value={ slot.api_key_id || '' }
+										onChange={ ( value ) => onWalletChange( { api_key_id: value } ) }
+										aria-invalid={ keyIdInvalid ? 'true' : 'false' }
+									/>
+									<div className="simple-x402-page__api-key-secret">
+										<div className="components-base-control__label simple-x402-page__api-key-secret-label">
+											{ __( 'API key secret', 'simple-x402' ) }
+										</div>
+										{ ! secretEditable && credentialState.has_secret && (
+											<Text size={ 13 } variant="muted">
+												{ createInterpolateElement(
+													'env' === credentialState.source
+														? __(
+																'Set via the <code/> environment variable. Edit it on the server to change.',
+																'simple-x402'
+															)
+														: __(
+																'Set via the <code/> constant in wp-config.php. Edit it there to change.',
+																'simple-x402'
+															),
+													{
+														code: <code>{ credentialState.constant_name || '' }</code>,
+													}
+												) }
+											</Text>
+										) }
+										{ secretEditable && credentialState.has_secret && ! replaceOpen && (
+											<HStack spacing={ 2 } alignment="left" justify="flex-start">
+												<Text size={ 13 } variant="muted">
+													{ credentialState.saved_at_label
+														? sprintf(
+																/* translators: %s: human-readable save date. */
+																__( 'Key saved on %s.', 'simple-x402' ),
+																credentialState.saved_at_label
+															)
+														: __( 'Key saved.', 'simple-x402' ) }
+												</Text>
+												<Button
+													variant="link"
+													type="button"
+													onClick={ () => setReplaceOpen( true ) }
+												>
+													{ __( 'Replace key', 'simple-x402' ) }
+												</Button>
+											</HStack>
+										) }
+										{ secretInputShown && (
+											<TextareaControl
+												__nextHasNoMarginBottom
+												label={ __( 'API key secret', 'simple-x402' ) }
+												hideLabelFromVision
+												placeholder={ __(
+													'Paste the long secret string from the CDP Portal.',
+													'simple-x402'
+												) }
+												help={
+													secretInvalid ? (
+														<span
+															className="simple-x402-page__field-error"
+															role="alert"
+														>
+															{ __(
+																'That doesn’t look like a CDP key secret. Copy the “API Key Secret” value, not the JSON key/value pair.',
+																'simple-x402'
+															) }
+														</span>
+													) : (
+														createInterpolateElement(
+															__(
+																'For production sites, define <code/> in wp-config.php instead — the plugin reads that constant first and the secret never lands in the database.',
+																'simple-x402'
+															),
+															{
+																code: <code>{ credentialState.constant_name || '' }</code>,
+															}
+														)
+													)
+												}
+												rows={ 4 }
+												value={ pendingSecret }
+												onChange={ ( value ) => setPendingSecret( value ) }
+												aria-invalid={ secretInvalid ? 'true' : 'false' }
+											/>
+										) }
+									</div>
+								</div>
+							</>
+						) }
 					</>
 				) }
 			</CardBody>
 			<SaveFooter
-				disabled={ ! isDirty || walletHasInvalidFormat }
+				disabled={ ! isDirty || walletHasInvalidFormat || keyIdInvalid || secretInvalid }
 				saving={ saving }
 				error={ error }
 				onSave={ onSave }
@@ -982,13 +1093,31 @@ function SettingsApp() {
 		if ( ! probeBlock?.url || ! probeBlock?.nonce ) {
 			return;
 		}
-		if ( ! String( mergedSnapshot.selected_facilitator_id ?? '' ).trim() ) {
+		const connectorId = String( mergedSnapshot.selected_facilitator_id ?? '' ).trim();
+		if ( '' === connectorId ) {
 			if ( rid !== adminChecksRequestId.current ) {
 				return;
 			}
 			setPaywallCheck( {
 				infoMessage: __(
 					'Paywall probe skipped: choose a facilitator so the paywall can respond.',
+					'simple-x402'
+				),
+			} );
+			return;
+		}
+		const managedWalletIds = config.managedWalletFacilitators || [];
+		const slotForConnector = ( mergedSnapshot.facilitators || {} )[ connectorId ];
+		const walletConfigured =
+			managedWalletIds.includes( connectorId ) ||
+			'' !== String( slotForConnector?.wallet_address ?? '' ).trim();
+		if ( ! walletConfigured ) {
+			if ( rid !== adminChecksRequestId.current ) {
+				return;
+			}
+			setPaywallCheck( {
+				infoMessage: __(
+					'Paywall probe skipped: add a receiving wallet so the paywall has somewhere to send payments.',
 					'simple-x402'
 				),
 			} );
@@ -1111,14 +1240,6 @@ function SettingsApp() {
 		<div className="simple-x402-page__content">
 			<div className="simple-x402-page__notices" ref={ noticesRef } />
 			<VStack spacing={ 6 }>
-				<RunChecksCard
-					paywallDirty={ paywallDirty }
-					facilitatorDirty={ facilitatorDirty }
-					runChecksPending={ runChecksPending }
-					onRunChecks={ onRunChecks }
-					facilitatorCheck={ facilitatorCheck }
-					paywallCheck={ paywallCheck }
-				/>
 				<PaywallScopeCard
 					saved={ saved }
 					save={ save }
@@ -1141,6 +1262,14 @@ function SettingsApp() {
 					setSlots={ setSlots }
 					onFacilitatorFormChange={ invalidateChecksFromFormEdit }
 					onFacilitatorSaveComplete={ onFacilitatorSaveComplete }
+				/>
+				<RunChecksCard
+					paywallDirty={ paywallDirty }
+					facilitatorDirty={ facilitatorDirty }
+					runChecksPending={ runChecksPending }
+					onRunChecks={ onRunChecks }
+					facilitatorCheck={ facilitatorCheck }
+					paywallCheck={ paywallCheck }
 				/>
 			</VStack>
 		</div>

@@ -9,11 +9,11 @@ declare(strict_types=1);
 
 namespace SimpleX402\Admin;
 
-use SimpleX402\Admin\GravatarLookupAjax;
 use SimpleX402\Admin\SettingsAjax;
 use SimpleX402\Admin\PaywallProbeAjax;
 use SimpleX402\Admin\TestConnectionAjax;
 use SimpleX402\Connectors\ConnectorRegistry;
+use SimpleX402\Services\ConnectorCredentialStore;
 use SimpleX402\Services\FacilitatorHooks;
 use SimpleX402\Settings\SettingsRepository;
 
@@ -34,6 +34,7 @@ final class SettingsPage {
 	public function __construct(
 		private readonly SettingsRepository $settings,
 		private readonly ConnectorRegistry $connectors = new ConnectorRegistry(),
+		private readonly ConnectorCredentialStore $credentials = new ConnectorCredentialStore(),
 	) {}
 
 	/**
@@ -189,9 +190,16 @@ final class SettingsPage {
 		);
 
 		$managed_wallet_facilitators = array();
-		foreach ( array_keys( $this->connectors->facilitators() ) as $fid ) {
+		$api_key_facilitators        = array();
+		$connector_credentials       = array();
+		foreach ( $this->connectors->facilitators() as $fid => $connector ) {
 			if ( '' !== (string) apply_filters( FacilitatorHooks::MANAGED_POOL_PAY_TO, '', $fid ) ) {
 				$managed_wallet_facilitators[] = $fid;
+			}
+			$auth_method = (string) ( ( $connector['authentication']['method'] ?? '' ) );
+			if ( 'api_key' === $auth_method ) {
+				$api_key_facilitators[]          = $fid;
+				$connector_credentials[ $fid ] = $this->credentials->status( $fid );
 			}
 		}
 
@@ -212,6 +220,8 @@ final class SettingsPage {
 			'modeCategory'              => SettingsRepository::PAYWALL_MODE_CATEGORY,
 			'facilitators'              => $facilitators,
 			'managedWalletFacilitators' => $managed_wallet_facilitators,
+			'apiKeyFacilitators'        => $api_key_facilitators,
+			'connectorCredentials'      => $connector_credentials,
 			'ajaxUrl'                   => function_exists( 'admin_url' ) ? admin_url( 'admin-ajax.php' ) : '',
 			'testConnection'            => array(
 				'action' => TestConnectionAjax::ACTION,
@@ -224,11 +234,6 @@ final class SettingsPage {
 			'paywallProbe'              => array(
 				'action' => PaywallProbeAjax::ACTION,
 				'nonce'  => function_exists( 'wp_create_nonce' ) ? wp_create_nonce( PaywallProbeAjax::NONCE ) : '',
-			),
-			'gravatarLookup'            => array(
-				'action'   => GravatarLookupAjax::ACTION,
-				'nonce'    => function_exists( 'wp_create_nonce' ) ? wp_create_nonce( GravatarLookupAjax::NONCE ) : '',
-				'endpoint' => GravatarLookupAjax::endpoint(),
 			),
 			'values'                    => array(
 				'paywall_mode'             => $this->settings->paywall_mode(),

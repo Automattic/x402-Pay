@@ -44,9 +44,9 @@ final class ConnectorRegistryTest extends TestCase {
 
 	public function test_facilitator_returns_matching_connector(): void {
 		$GLOBALS['__sx402_connectors'] = array(
-			'wpcom_x402' => array(
+			'some_facilitator' => array(
 				'type' => ConnectorRegistry::FACILITATOR_TYPE,
-				'name' => 'WP.com',
+				'name' => 'Example x402',
 			),
 		);
 
@@ -55,9 +55,9 @@ final class ConnectorRegistryTest extends TestCase {
 		$this->assertSame(
 			array(
 				'type' => ConnectorRegistry::FACILITATOR_TYPE,
-				'name' => 'WP.com',
+				'name' => 'Example x402',
 			),
-			$registry->facilitator( 'wpcom_x402' )
+			$registry->facilitator( 'some_facilitator' )
 		);
 	}
 

@@ -16,8 +16,6 @@ final class FacilitatorHooks {
 
 	public const MANAGED_POOL_PAY_TO = 'simple_x402_managed_pool_pay_to';
 
-	public const IS_JETPACK_SITE_CONNECTED = 'simple_x402_is_jetpack_site_connected';
-
 	public const PAYMENT_SETTLED = 'simple_x402_payment_settled';
 
 	public const LEDGER_REPORT_URL = 'simple_x402_ledger_report_url';

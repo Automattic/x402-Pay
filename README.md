@@ -26,7 +26,7 @@ npm start          # dev/watch
 
 The admin UI lives in `assets/src/index.jsx` and builds to `assets/build/`. The output is gitignored — run `npm run build` before packaging the plugin.
 
-For an end-to-end local sandbox (wp-now + Jetpack companion + facilitator stub), see [LOCAL_DEV.md](LOCAL_DEV.md).
+For an end-to-end local sandbox (wp-now), see [LOCAL_DEV.md](LOCAL_DEV.md).
 
 ## Test client
 
@@ -61,7 +61,7 @@ See the `simple_x402_rule_for_request` filter in `src/Services/RuleResolver.php`
 
 ## Facilitator connectors (WP 7.0+)
 
-Simple x402 discovers facilitator backends through the [WordPress 7.0 Connectors API](https://make.wordpress.org/core/2026/03/18/introducing-the-connectors-api-in-wordpress-7-0/). A facilitator is any external service that can `verify` and `settle` x402 payments — x402.org, a site's own Coinbase CDP account, WP.com via Jetpack, etc.
+Simple x402 discovers facilitator backends through the [WordPress 7.0 Connectors API](https://make.wordpress.org/core/2026/03/18/introducing-the-connectors-api-in-wordpress-7-0/). A facilitator is any external service that can `verify` and `settle` x402 payments — x402.org, a site's own Coinbase CDP account, etc.
 
 Publishing a facilitator is a two-step contract:
 
@@ -83,9 +83,9 @@ Publishing a facilitator is a two-step contract:
 
 ### Built-in x402.org connector
 
-Simple x402 ships with one connector out of the box: `simple_x402_test`, which routes through the public x402.org facilitator on Base Sepolia. It's the default "try the paywall on testnet" option and requires no credentials. Site owners pick it from the Facilitator dropdown in Settings → Simple x402 and enter a receiving wallet + price. Real facilitators (e.g. a Jetpack-backed one, a direct Coinbase CDP one) show up alongside it when those plugins are installed.
+Simple x402 ships with two connectors out of the box: `simple_x402_test`, which routes through the public x402.org facilitator on Base Sepolia for testnet trials, and `coinbase_cdp`, which routes through Coinbase Developer Platform on Base mainnet (requires a CDP Secret API Key). Site owners pick one from the Facilitator dropdown in Settings → Simple x402 and enter a receiving wallet + price.
 
-**Managed receiving address:** Extensions (including `simple-x402-jetpack`) may filter `simple_x402_managed_pool_pay_to` so `payTo` bypasses the per-site wallet field. **Settlement reporting:** after a successful settle, the plugin fires `simple_x402_payment_settled` and may POST to a URL from the `simple_x402_ledger_report_url` filter (see `SimpleX402\Services\FacilitatorHooks`). The ledger (or any hook subscriber that persists externally) should de-duplicate on `transaction`; the plugin may deliver the same settlement more than once under retries or concurrency.
+**Managed receiving address:** Extensions may filter `simple_x402_managed_pool_pay_to` so `payTo` bypasses the per-site wallet field. **Settlement reporting:** after a successful settle, the plugin fires `simple_x402_payment_settled` and may POST to a URL from the `simple_x402_ledger_report_url` filter (see `SimpleX402\Services\FacilitatorHooks`). The ledger (or any hook subscriber that persists externally) should de-duplicate on `transaction`; the plugin may deliver the same settlement more than once under retries or concurrency.
 
 ## Suggested improvements
 

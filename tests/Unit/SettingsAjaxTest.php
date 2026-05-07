@@ -5,7 +5,9 @@ namespace SimpleX402\Tests\Unit;
 
 use PHPUnit\Framework\TestCase;
 use SimpleX402\Admin\SettingsAjax;
+use SimpleX402\Connectors\ConnectorRegistry;
 use SimpleX402\Http\PaywallController;
+use SimpleX402\Services\ConnectorCredentialStore;
 use SimpleX402\Settings\SettingsRepository;
 
 final class SettingsAjaxTest extends TestCase {
@@ -16,12 +18,15 @@ final class SettingsAjaxTest extends TestCase {
 	}
 
 	protected function setUp(): void {
-		$GLOBALS['__sx402_options']           = array();
-		$GLOBALS['__sx402_json_success']      = null;
-		$GLOBALS['__sx402_get_posts_return'] = null;
-		$GLOBALS['__sx402_current_user_id']  = 1;
-		$GLOBALS['__sx402_current_user_caps'] = array( 'manage_options' );
-		$GLOBALS['__sx402_existing_terms']   = array(
+		$GLOBALS['__sx402_options']             = array();
+		$GLOBALS['__sx402_json_success']        = null;
+		$GLOBALS['__sx402_json_error']          = null;
+		$GLOBALS['__sx402_json_error_status_code'] = 0;
+		$GLOBALS['__sx402_get_posts_return']    = null;
+		$GLOBALS['__sx402_current_user_id']     = 1;
+		$GLOBALS['__sx402_current_user_caps']   = array( 'manage_options' );
+		$GLOBALS['__sx402_connectors']          = array();
+		$GLOBALS['__sx402_existing_terms']      = array(
 			array( 'term_id' => 3, 'name' => 'Wall', 'taxonomy' => 'category' ),
 		);
 	}
@@ -97,5 +102,80 @@ final class SettingsAjaxTest extends TestCase {
 		$this->assertIsArray( $data );
 		$this->assertArrayHasKey( 'values', $data );
 		$this->assertArrayNotHasKey( 'probe', $data );
+	}
+
+	public function test_oversized_fields_payload_is_rejected_before_decode(): void {
+		$_POST['action'] = SettingsAjax::ACTION;
+		$_POST['nonce']  = 'x';
+		$_POST['fields'] = str_repeat( 'a', SettingsAjax::MAX_FIELDS_BYTES + 1 );
+
+		( new SettingsAjax( new SettingsRepository() ) )->handle();
+
+		$this->assertNull( $GLOBALS['__sx402_json_success'] );
+		$this->assertSame( 'fields_too_large', $GLOBALS['__sx402_json_error']['error'] ?? '' );
+		$this->assertSame( 413, $GLOBALS['__sx402_json_error_status_code'] );
+	}
+
+	public function test_unregistered_facilitator_slots_are_dropped(): void {
+		$GLOBALS['__sx402_connectors'] = array(
+			'simple_x402_test' => array( 'type' => ConnectorRegistry::FACILITATOR_TYPE ),
+		);
+
+		$_POST['action'] = SettingsAjax::ACTION;
+		$_POST['nonce']  = 'x';
+		$_POST['fields'] = wp_json_encode(
+			array(
+				'facilitators' => array(
+					'simple_x402_test' => array( 'wallet_address' => '0xabc' ),
+					'totally_unknown'  => array( 'wallet_address' => '0xdef' ),
+				),
+			)
+		);
+
+		( new SettingsAjax( new SettingsRepository() ) )->handle();
+
+		$data = $GLOBALS['__sx402_json_success'];
+		$this->assertArrayHasKey( 'simple_x402_test', $data['values']['facilitators'] );
+		$this->assertArrayNotHasKey( 'totally_unknown', $data['values']['facilitators'] );
+	}
+
+	public function test_connector_secrets_only_accepts_api_key_facilitators(): void {
+		$GLOBALS['__sx402_connectors'] = array(
+			'no_auth_connector' => array(
+				'type'           => ConnectorRegistry::FACILITATOR_TYPE,
+				'authentication' => array( 'method' => 'none' ),
+			),
+			'cdp_connector'     => array(
+				'type'           => ConnectorRegistry::FACILITATOR_TYPE,
+				'authentication' => array( 'method' => 'api_key' ),
+			),
+		);
+
+		$_POST['action'] = SettingsAjax::ACTION;
+		$_POST['nonce']  = 'x';
+		$_POST['fields'] = wp_json_encode(
+			array(
+				'connector_secrets' => array(
+					'no_auth_connector' => 'should-be-ignored',
+					'cdp_connector'     => 'real-secret',
+					'totally_unknown'   => 'also-ignored',
+					'BAD!ID'            => 'rejected-by-charset',
+				),
+			)
+		);
+
+		( new SettingsAjax( new SettingsRepository() ) )->handle();
+
+		$store = new ConnectorCredentialStore();
+		$this->assertSame( 'real-secret', $store->secret( 'cdp_connector' ) );
+		$this->assertSame( '', $store->secret( 'no_auth_connector' ) );
+		$this->assertSame( '', $store->secret( 'totally_unknown' ) );
+		$this->assertSame( '', $store->secret( 'BAD!ID' ) );
+
+		$data = $GLOBALS['__sx402_json_success'];
+		$this->assertSame(
+			array( 'cdp_connector' ),
+			array_keys( $data['connectorCredentials'] ?? array() )
+		);
 	}
 }

@@ -4,42 +4,8 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "5e79b9520967772a32ab8f9897e930ff",
+    "content-hash": "5982f865272ede05ff390df223698df9",
     "packages": [
-        {
-            "name": "automattic/simple-x402-jetpack",
-            "version": "dev-feat/jetpack-companion",
-            "dist": {
-                "type": "path",
-                "url": "companions/simple-x402-jetpack",
-                "reference": "d4a41979c15ceae95bbda3725976bc46414e3fde"
-            },
-            "require": {
-                "php": ">=8.1"
-            },
-            "suggest": {
-                "automattic/jetpack-connection": "Required at runtime. The companion detects its presence via class_exists and stays inert otherwise."
-            },
-            "type": "wordpress-plugin",
-            "autoload": {
-                "psr-4": {
-                    "SimpleX402\\Jetpack\\": "src/"
-                }
-            },
-            "autoload-dev": {
-                "psr-4": {
-                    "SimpleX402\\Jetpack\\Tests\\": "tests/"
-                }
-            },
-            "license": [
-                "GPL-2.0-or-later"
-            ],
-            "description": "Companion plugin for Simple x402 that registers a WordPress.com facilitator backed by Jetpack Connection.",
-            "transport-options": {
-                "symlink": true,
-                "relative": true
-            }
-        },
         {
             "name": "jaybizzle/crawler-detect",
             "version": "v1.3.9",
@@ -96,16 +62,16 @@
     "packages-dev": [
         {
             "name": "dealerdirect/phpcodesniffer-composer-installer",
-            "version": "v1.2.0",
+            "version": "v1.2.1",
             "source": {
                 "type": "git",
                 "url": "https://github.com/PHPCSStandards/composer-installer.git",
-                "reference": "845eb62303d2ca9b289ef216356568ccc075ffd1"
+                "reference": "963f0c67bffde0eac41b56be71ac0e8ba132f0bd"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/PHPCSStandards/composer-installer/zipball/845eb62303d2ca9b289ef216356568ccc075ffd1",
-                "reference": "845eb62303d2ca9b289ef216356568ccc075ffd1",
+                "url": "https://api.github.com/repos/PHPCSStandards/composer-installer/zipball/963f0c67bffde0eac41b56be71ac0e8ba132f0bd",
+                "reference": "963f0c67bffde0eac41b56be71ac0e8ba132f0bd",
                 "shasum": ""
             },
             "require": {
@@ -188,7 +154,7 @@
                     "type": "thanks_dev"
                 }
             ],
-            "time": "2025-11-11T04:32:07+00:00"
+            "time": "2026-05-06T08:26:05+00:00"
         },
         {
             "name": "myclabs/deep-copy",
@@ -2395,9 +2361,7 @@
     ],
     "aliases": [],
     "minimum-stability": "stable",
-    "stability-flags": {
-        "automattic/simple-x402-jetpack": 20
-    },
+    "stability-flags": {},
     "prefer-stable": false,
     "prefer-lowest": false,
     "platform": {

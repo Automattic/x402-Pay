@@ -10,51 +10,75 @@ declare(strict_types=1);
 namespace SimpleX402\Services;
 
 /**
- * Remembers "wallet X has paid for path Y" for a rule-specified TTL.
+ * Issues opaque grant tokens after a successful payment and redeems them on
+ * follow-up requests, so a paying client can read the same path again
+ * without re-paying for the rule-specified TTL.
  *
- * Keyed by sha256(lowercase_wallet | path). Stateless for clients: any
- * request arriving with the same wallet in `X-Wallet-Address` or in a
- * PAYMENT-SIGNATURE authorisation within the TTL is served for free.
+ * The token is the secret. Wallet addresses do not bypass the paywall —
+ * they're public on-chain, so anyone watching the recipient could replay
+ * them. The store keeps `sha256(token)` (not the raw token) so a database
+ * leak doesn't expose redeemable bearer credentials.
+ *
+ * Storage shape (per token, behind the hashed transient key):
+ * `[ 'path' => string, 'issued_at' => int, ...$meta ]`
  */
 final class GrantStore {
 
-	private const PREFIX = 'sx402_grant_';
+	private const PREFIX = 'sx402_gt_';
 
 	/**
-	 * Is there a live grant for this wallet+path pair?
+	 * Mint a new grant. Returns the freshly-generated token; the caller
+	 * is responsible for delivering it to the client (e.g. as a response
+	 * header and/or Set-Cookie).
+	 *
+	 * @param string $path Request path the grant covers — verified at redeem
+	 *                     time so a token leaked from one URL can't be
+	 *                     replayed against another.
+	 * @param int    $ttl  Lifetime in seconds; non-positive returns ''.
+	 * @param array  $meta Free-form metadata (e.g. tx hash) merged with the
+	 *                     stored value.
+	 * @return string The token, or '' when the grant could not be issued.
 	 */
-	public function has_grant( string $wallet, string $path ): bool {
-		$key = $this->key( $wallet, $path );
-		if ( null === $key ) {
+	public function issue( string $path, int $ttl, array $meta = array() ): string {
+		if ( $ttl <= 0 ) {
+			return '';
+		}
+		$token = bin2hex( random_bytes( 32 ) );
+		$key   = self::key( $token );
+		set_transient(
+			$key,
+			$meta + array(
+				'path'      => $path,
+				'issued_at' => time(),
+			),
+			$ttl
+		);
+		return $token;
+	}
+
+	/**
+	 * True only when $token resolves to a live grant whose stored path
+	 * matches $path exactly. A leaked token presented against any other
+	 * path is rejected so the bypass can't be reused across URLs.
+	 */
+	public function redeem( string $token, string $path ): bool {
+		if ( '' === $token ) {
 			return false;
 		}
-		return false !== get_transient( $key );
+		$stored = get_transient( self::key( $token ) );
+		if ( ! is_array( $stored ) ) {
+			return false;
+		}
+		return ( $stored['path'] ?? '' ) === $path;
 	}
 
 	/**
-	 * Issue a new grant.
-	 *
-	 * @param string $wallet Wallet address (case-insensitive).
-	 * @param string $path   Request path the grant applies to.
-	 * @param int    $ttl    Lifetime in seconds; non-positive is a no-op.
-	 * @param array  $meta   Free-form metadata to persist (e.g. tx hash).
+	 * Hashes the raw token so the transients table never holds a redeemable
+	 * bearer secret in plaintext. SHA-256 is fine here — the token has
+	 * 256 bits of entropy from `random_bytes(32)`, so there's no offline
+	 * brute-force surface to harden against.
 	 */
-	public function issue( string $wallet, string $path, int $ttl, array $meta ): void {
-		$key = $this->key( $wallet, $path );
-		if ( null === $key || $ttl <= 0 ) {
-			return;
-		}
-		set_transient( $key, $meta + array( 'issued_at' => time() ), $ttl );
-	}
-
-	/**
-	 * Compute the transient key, or null if the wallet is empty.
-	 */
-	private function key( string $wallet, string $path ): ?string {
-		$wallet = strtolower( trim( $wallet ) );
-		if ( '' === $wallet ) {
-			return null;
-		}
-		return self::PREFIX . hash( 'sha256', $wallet . '|' . $path );
+	private static function key( string $token ): string {
+		return self::PREFIX . hash( 'sha256', $token );
 	}
 }

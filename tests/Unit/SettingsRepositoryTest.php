@@ -201,14 +201,20 @@ final class SettingsRepositoryTest extends TestCase {
 			)
 		);
 
-		// Existing slot preserved, but only with the canonical key.
+		// Existing slot preserved, but only with the canonical keys.
 		$this->assertSame(
-			array( 'wallet_address' => '0xOld' ),
+			array(
+				'wallet_address' => '0xOld',
+				'api_key_id'     => '',
+			),
 			$merged['facilitators']['simple_x402_test']
 		);
 		// New slot also normalised.
 		$this->assertSame(
-			array( 'wallet_address' => '0xNew' ),
+			array(
+				'wallet_address' => '0xNew',
+				'api_key_id'     => '',
+			),
 			$merged['facilitators']['coinbase_cdp']
 		);
 	}
@@ -338,6 +344,41 @@ final class SettingsRepositoryTest extends TestCase {
 				)
 			)
 		);
+	}
+
+	public function test_facilitators_map_is_capped_at_max_slot_count(): void {
+		$repo  = new SettingsRepository();
+		$slots = array();
+		for ( $i = 0; $i < SettingsRepository::MAX_FACILITATOR_SLOTS + 5; $i++ ) {
+			$slots[ 'facilitator_' . $i ] = array( 'wallet_address' => '0xabc' );
+		}
+
+		$merged = $repo->update( array( 'facilitators' => $slots ) );
+
+		$this->assertCount(
+			SettingsRepository::MAX_FACILITATOR_SLOTS,
+			$merged['facilitators']
+		);
+	}
+
+	public function test_slot_field_lengths_are_truncated(): void {
+		$repo      = new SettingsRepository();
+		$long_blob = str_repeat( 'x', SettingsRepository::MAX_SLOT_FIELD_BYTES + 100 );
+
+		$merged = $repo->update(
+			array(
+				'facilitators' => array(
+					'simple_x402_test' => array(
+						'wallet_address' => $long_blob,
+						'api_key_id'     => $long_blob,
+					),
+				),
+			)
+		);
+
+		$slot = $merged['facilitators']['simple_x402_test'];
+		$this->assertSame( SettingsRepository::MAX_SLOT_FIELD_BYTES, strlen( $slot['wallet_address'] ) );
+		$this->assertSame( SettingsRepository::MAX_SLOT_FIELD_BYTES, strlen( $slot['api_key_id'] ) );
 	}
 
 	public function test_resolved_pay_to_prefers_managed_pool_from_filter(): void {

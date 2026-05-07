@@ -7,7 +7,6 @@ use PHPUnit\Framework\TestCase;
 use SimpleX402\Connectors\ConnectorRegistry;
 use SimpleX402\Connectors\TestConnectorRegistrar;
 use SimpleX402\Plugin;
-use SimpleX402\Services\FacilitatorHooks;
 use SimpleX402\Settings\SettingsRepository;
 
 final class FacilitatorAutopickTest extends TestCase {
@@ -72,37 +71,4 @@ final class FacilitatorAutopickTest extends TestCase {
 		$this->assertFalse( get_option( 'simple_x402_facilitator_autopicked', false ) );
 	}
 
-	public function test_autopick_prefers_wpcom_when_jetpack_connected(): void {
-		$GLOBALS['__sx402_options']    = array(
-			'simple_x402_settings' => array(),
-		);
-		$GLOBALS['__sx402_connectors'] = array(
-			'wpcom_x402'       => array( 'type' => ConnectorRegistry::FACILITATOR_TYPE ),
-			TestConnectorRegistrar::ID => array( 'type' => ConnectorRegistry::FACILITATOR_TYPE ),
-		);
-		add_filter( FacilitatorHooks::IS_JETPACK_SITE_CONNECTED, static fn () => true );
-
-		$ref = new \ReflectionMethod( Plugin::class, 'maybe_autopick_facilitator' );
-		$ref->setAccessible( true );
-		$ref->invoke( null, new SettingsRepository() );
-
-		$this->assertSame( 'wpcom_x402', ( new SettingsRepository() )->selected_facilitator_id() );
-	}
-
-	public function test_autopick_falls_back_to_test_when_wpcom_present_but_jetpack_not_connected(): void {
-		$GLOBALS['__sx402_options']    = array(
-			'simple_x402_settings' => array(),
-		);
-		$GLOBALS['__sx402_connectors'] = array(
-			'wpcom_x402'       => array( 'type' => ConnectorRegistry::FACILITATOR_TYPE ),
-			TestConnectorRegistrar::ID => array( 'type' => ConnectorRegistry::FACILITATOR_TYPE ),
-		);
-		add_filter( FacilitatorHooks::IS_JETPACK_SITE_CONNECTED, static fn () => false );
-
-		$ref = new \ReflectionMethod( Plugin::class, 'maybe_autopick_facilitator' );
-		$ref->setAccessible( true );
-		$ref->invoke( null, new SettingsRepository() );
-
-		$this->assertSame( TestConnectorRegistrar::ID, ( new SettingsRepository() )->selected_facilitator_id() );
-	}
 }

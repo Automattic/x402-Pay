@@ -47,11 +47,13 @@ final class PaywallControllerTest extends TestCase {
 			2
 		);
 		$GLOBALS['__sx402_response']   = array(
-			'status'  => 200,
-			'headers' => array(),
-			'body'    => null,
-			'exited'  => false,
+			'status'          => 200,
+			'headers'         => array(),
+			'success_headers' => array(),
+			'body'            => null,
+			'exited'          => false,
 		);
+		$_COOKIE                       = array();
 		$GLOBALS['__sx402_http']            = null;
 		$GLOBALS['__sx402_http_next']       = null;
 		$GLOBALS['__sx402_http_queue']      = array();
@@ -295,9 +297,47 @@ final class PaywallControllerTest extends TestCase {
 		$this->assertSame( '0.01', $seen['rule']['price'] );
 	}
 
-	public function test_allows_request_with_live_grant(): void {
+	public function test_allows_request_with_live_grant_via_header_token(): void {
 		add_filter( 'simple_x402_rule_for_request', static fn () => array( 'price' => '0.01' ), 10, 2 );
-		( new GrantStore() )->issue( '0xbuyer', '/foo', 60, array() );
+		$token = ( new GrantStore() )->issue( '/foo', 60, array() );
+
+		$this->controller()->handle(
+			array(
+				'path'    => '/foo',
+				'method'  => 'GET',
+				'post_id' => 0,
+				'headers' => array( PaywallController::GRANT_HEADER => $token ),
+			)
+		);
+
+		$this->assertSame( 200, $GLOBALS['__sx402_response']['status'] );
+		$this->assertFalse( $GLOBALS['__sx402_response']['exited'] );
+	}
+
+	public function test_allows_request_with_live_grant_via_cookie(): void {
+		add_filter( 'simple_x402_rule_for_request', static fn () => array( 'price' => '0.01' ), 10, 2 );
+		$token                                       = ( new GrantStore() )->issue( '/foo', 60, array() );
+		$_COOKIE[ PaywallController::GRANT_COOKIE ] = $token;
+
+		$this->controller()->handle(
+			array(
+				'path'    => '/foo',
+				'method'  => 'GET',
+				'post_id' => 0,
+				'headers' => array(),
+			)
+		);
+
+		$this->assertSame( 200, $GLOBALS['__sx402_response']['status'] );
+		$this->assertFalse( $GLOBALS['__sx402_response']['exited'] );
+	}
+
+	public function test_wallet_address_header_alone_no_longer_bypasses(): void {
+		// Pre-fix: sending X-Wallet-Address with the paying wallet was enough
+		// to redeem the grant for that path. Wallet addresses are public, so
+		// that bypass must not work anymore.
+		add_filter( 'simple_x402_rule_for_request', static fn () => array( 'price' => '0.01' ), 10, 2 );
+		( new GrantStore() )->issue( '/foo', 60, array( 'wallet' => '0xbuyer' ) );
 
 		$this->controller()->handle(
 			array(
@@ -308,13 +348,28 @@ final class PaywallControllerTest extends TestCase {
 			)
 		);
 
-		$this->assertSame( 200, $GLOBALS['__sx402_response']['status'] );
-		$this->assertFalse( $GLOBALS['__sx402_response']['exited'] );
+		$this->assertSame( 402, $GLOBALS['__sx402_response']['status'] );
+	}
+
+	public function test_token_for_one_path_does_not_redeem_against_another(): void {
+		add_filter( 'simple_x402_rule_for_request', static fn () => array( 'price' => '0.01' ), 10, 2 );
+		$token = ( new GrantStore() )->issue( '/foo', 60, array() );
+
+		$this->controller()->handle(
+			array(
+				'path'    => '/bar',
+				'method'  => 'GET',
+				'post_id' => 0,
+				'headers' => array( PaywallController::GRANT_HEADER => $token ),
+			)
+		);
+
+		$this->assertSame( 402, $GLOBALS['__sx402_response']['status'] );
 	}
 
 	public function test_client_profile_filter_not_invoked_when_grant_short_circuits(): void {
 		add_filter( 'simple_x402_rule_for_request', static fn () => array( 'price' => '0.01' ), 10, 2 );
-		( new GrantStore() )->issue( '0xbuyer', '/foo', 60, array() );
+		$token = ( new GrantStore() )->issue( '/foo', 60, array() );
 
 		$filter_runs = 0;
 		add_filter(
@@ -332,7 +387,7 @@ final class PaywallControllerTest extends TestCase {
 				'path'    => '/foo',
 				'method'  => 'GET',
 				'post_id' => 0,
-				'headers' => array( 'X-Wallet-Address' => '0xbuyer' ),
+				'headers' => array( PaywallController::GRANT_HEADER => $token ),
 			)
 		);
 
@@ -367,8 +422,8 @@ final class PaywallControllerTest extends TestCase {
 		$this->assertSame( '0x1111111111111111111111111111111111111111', $body['requirements']['payTo'] );
 	}
 
-	public function test_verifies_and_settles_then_issues_grant(): void {
-		add_filter( 'simple_x402_rule_for_request', static fn () => array( 'price' => '0.01' ), 10, 2 );
+	public function test_verifies_and_settles_then_emits_grant_token_and_cookie(): void {
+		add_filter( 'simple_x402_rule_for_request', static fn () => array( 'price' => '0.01', 'ttl' => 600 ), 10, 2 );
 
 		$payload = X402HeaderCodec::encode(
 			array(
@@ -398,7 +453,36 @@ final class PaywallControllerTest extends TestCase {
 		);
 
 		$this->assertSame( 200, $GLOBALS['__sx402_response']['status'] );
-		$this->assertTrue( ( new GrantStore() )->has_grant( '0xbuyer', '/foo' ) );
+
+		$success_headers = $GLOBALS['__sx402_response']['success_headers'];
+		$grant_line      = self::find_header_line( $success_headers, PaywallController::GRANT_HEADER . ': ' );
+		$cookie_line     = self::find_header_line( $success_headers, 'Set-Cookie: ' . PaywallController::GRANT_COOKIE . '=' );
+		$this->assertNotNull( $grant_line, 'X-Payment-Grant header must be staged on the success path.' );
+		$this->assertNotNull( $cookie_line, 'sx402_grant cookie must be staged on the success path.' );
+
+		// Cookie must carry the security-critical attributes — Secure, HttpOnly,
+		// SameSite=Strict — and a Max-Age that matches the rule TTL.
+		$this->assertStringContainsString( 'Secure', $cookie_line );
+		$this->assertStringContainsString( 'HttpOnly', $cookie_line );
+		$this->assertStringContainsString( 'SameSite=Strict', $cookie_line );
+		$this->assertStringContainsString( 'Max-Age=600', $cookie_line );
+		$this->assertStringContainsString( 'Path=/foo', $cookie_line );
+
+		// The token from the response header must redeem against the same path.
+		$token = substr( $grant_line, strlen( PaywallController::GRANT_HEADER . ': ' ) );
+		$this->assertTrue( ( new GrantStore() )->redeem( $token, '/foo' ) );
+	}
+
+	/**
+	 * @param list<string> $lines
+	 */
+	private static function find_header_line( array $lines, string $prefix ): ?string {
+		foreach ( $lines as $line ) {
+			if ( str_starts_with( (string) $line, $prefix ) ) {
+				return (string) $line;
+			}
+		}
+		return null;
 	}
 
 	public function test_settle_success_fires_payment_settled_action(): void {

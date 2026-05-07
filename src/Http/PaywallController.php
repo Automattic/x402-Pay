@@ -65,6 +65,12 @@ final class PaywallController {
 	/** Request header carrying {@see self::PROBE_NONCE_ACTION} from the settings screen self-check. */
 	public const PROBE_HEADER = 'X-Simple-X402-Probe';
 
+	/** Response/request header carrying the opaque grant token after a successful payment. */
+	public const GRANT_HEADER = 'X-Payment-Grant';
+
+	/** Cookie name used to redeem the grant on subsequent requests from a browser. */
+	public const GRANT_COOKIE = 'sx402_grant';
+
 	/**
 	 * Lazily-resolved facilitator client + the builder that wraps its profile.
 	 * Deferred so requests that never reach the paywall path don't pay for
@@ -166,8 +172,8 @@ final class PaywallController {
 			return;
 		}
 
-		$wallet_hint = (string) ( $request['headers']['X-Wallet-Address'] ?? '' );
-		if ( '' !== $wallet_hint && $this->grants->has_grant( $wallet_hint, $request['path'] ) ) {
+		$grant_token = $this->extract_grant_token( $request );
+		if ( '' !== $grant_token && $this->grants->redeem( $grant_token, $request['path'] ) ) {
 			return;
 		}
 
@@ -222,16 +228,16 @@ final class PaywallController {
 		}
 
 		$wallet = $this->extract_wallet( $payload );
-		if ( '' === $wallet ) {
-			$wallet = $wallet_hint;
-		}
-		if ( '' !== $wallet ) {
-			$this->grants->issue(
-				$wallet,
-				$request['path'],
-				$rule['ttl'],
-				array( 'transaction' => $settle['transaction'] )
-			);
+		$token  = $this->grants->issue(
+			$request['path'],
+			$rule['ttl'],
+			array(
+				'transaction' => $settle['transaction'] ?? null,
+				'wallet'      => $wallet,
+			)
+		);
+		if ( '' !== $token ) {
+			$this->emit_grant_response_headers( $token, $request['path'], $rule['ttl'] );
 		}
 
 		$this->settlement_notifier()->notify(
@@ -456,6 +462,48 @@ CSS;
 			return $stripped;
 		}
 		return implode( ' ', array_slice( $words, 0, 55 ) ) . '…';
+	}
+
+	/**
+	 * Extract the opaque grant token from either the request header (CLI /
+	 * scripts that capture the response header explicitly) or the
+	 * `sx402_grant` cookie (browsers, sent automatically once issued).
+	 *
+	 * @param array{headers:array<string,string>} $request
+	 */
+	private function extract_grant_token( array $request ): string {
+		$header = (string) ( $request['headers'][ self::GRANT_HEADER ] ?? '' );
+		if ( '' !== $header ) {
+			return $header;
+		}
+		// $_COOKIE is the only authoritative source — Plugin::collect_headers
+		// doesn't fold cookies into the request shape (and shouldn't: cookies
+		// have their own semantics).
+		$raw = $_COOKIE[ self::GRANT_COOKIE ] ?? '';
+		return is_string( $raw ) ? (string) wp_unslash( $raw ) : '';
+	}
+
+	/**
+	 * Stage the response header + Set-Cookie for a freshly-issued grant on
+	 * the success-path response struct so {@see \SimpleX402\Plugin} can
+	 * emit them before WordPress renders the page.
+	 *
+	 * The cookie is `Secure; HttpOnly; SameSite=Strict` and `Max-Age` matches
+	 * the rule TTL so the bypass disappears together with the server-side
+	 * transient. `Path` is scoped to the paid URL so an unrelated path on
+	 * the same site can't accidentally redeem it.
+	 */
+	private function emit_grant_response_headers( string $token, string $path, int $ttl ): void {
+		$cookie_path = '' !== $path ? $path : '/';
+		$cookie      = sprintf(
+			'%s=%s; Max-Age=%d; Path=%s; Secure; HttpOnly; SameSite=Strict',
+			self::GRANT_COOKIE,
+			rawurlencode( $token ),
+			max( $ttl, 0 ),
+			$cookie_path
+		);
+		$GLOBALS['__sx402_response']['success_headers'][] = self::GRANT_HEADER . ': ' . $token;
+		$GLOBALS['__sx402_response']['success_headers'][] = 'Set-Cookie: ' . $cookie;
 	}
 
 	/**

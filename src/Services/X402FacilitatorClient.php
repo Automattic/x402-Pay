@@ -11,6 +11,7 @@ namespace SimpleX402\Services;
 
 use SimpleX402\Facilitator\Facilitator;
 use SimpleX402\Facilitator\TestResult;
+use Throwable;
 
 /**
  * Posts PaymentRequirements + PaymentPayload bodies to a facilitator's
@@ -81,18 +82,49 @@ final class X402FacilitatorClient implements Facilitator {
 	}
 
 	/**
-	 * Probe the facilitator base URL to see if it's reachable. Does not
-	 * attempt a real verify — this is the admin UI's "is the connection alive"
-	 * button. Any HTTP response (including 4xx) counts as reachable; only
-	 * network errors and 5xx count as down.
+	 * Probe the facilitator to see if the configured credentials work.
+	 *
+	 * For CDP-style profiles (key id + base64 secret) this is a signed GET
+	 * against `/supported`, so a green check actually means "auth passes."
+	 * For unauthenticated facilitators we fall back to a HEAD against the
+	 * base URL — any non-5xx counts as reachable.
 	 */
 	public function test_connection(): TestResult {
-		$base    = rtrim( $this->profile->facilitator_url, '/' ) . '/';
+		$base    = rtrim( $this->profile->facilitator_url, '/' );
 		$started = microtime( true );
-		$raw     = wp_remote_head(
-			$base,
-			array( 'timeout' => self::PROBE_TIMEOUT )
-		);
+
+		if ( FacilitatorProfile::AUTH_CDP_JWT === $this->profile->auth_scheme
+			&& ! $this->cdp_credentials_complete() ) {
+			return new TestResult(
+				ok: false,
+				error: 'Add the API key ID and secret to verify connectivity.',
+				duration_ms: 0,
+			);
+		}
+
+		if ( $this->uses_cdp_jwt() ) {
+			$args = array(
+				'method'  => 'GET',
+				'timeout' => self::PROBE_TIMEOUT,
+				'headers' => array( 'Accept' => 'application/json' ),
+			);
+			try {
+				$args['headers'] = array_merge(
+					$args['headers'],
+					$this->auth_headers_for( 'GET', $base . '/supported' )
+				);
+			} catch ( Throwable $e ) {
+				return new TestResult(
+					ok: false,
+					error: $e->getMessage(),
+					duration_ms: (int) round( ( microtime( true ) - $started ) * 1000 ),
+				);
+			}
+			$raw = wp_remote_request( $base . '/supported', $args );
+		} else {
+			$raw = wp_remote_head( $base . '/', array( 'timeout' => self::PROBE_TIMEOUT ) );
+		}
+
 		$elapsed = (int) round( ( microtime( true ) - $started ) * 1000 );
 
 		if ( is_wp_error( $raw ) ) {
@@ -107,6 +139,16 @@ final class X402FacilitatorClient implements Facilitator {
 			return new TestResult(
 				ok: false,
 				error: 0 === $code ? 'No response' : "HTTP {$code}",
+				http_code: $code,
+				duration_ms: $elapsed,
+			);
+		}
+		// CDP probe: 401/403 means the JWT was rejected — that's an auth
+		// failure, not a "reachable but quirky" success.
+		if ( $this->uses_cdp_jwt() && in_array( $code, array( 401, 403 ), true ) ) {
+			return new TestResult(
+				ok: false,
+				error: "HTTP {$code} — credentials rejected",
 				http_code: $code,
 				duration_ms: $elapsed,
 			);
@@ -131,13 +173,20 @@ final class X402FacilitatorClient implements Facilitator {
 			'Content-Type' => 'application/json',
 			'Accept'       => 'application/json',
 		);
-		if ( '' !== $this->profile->api_key ) {
-			$headers['Authorization'] = 'Bearer ' . $this->profile->api_key;
+		$base = rtrim( $this->profile->facilitator_url, '/' ) . '/';
+		$url  = $base . ltrim( $endpoint, '/' );
+
+		try {
+			$headers = array_merge( $headers, $this->auth_headers_for( 'POST', $url ) );
+		} catch ( Throwable $e ) {
+			return array(
+				'body'  => array(),
+				'error' => $e->getMessage(),
+			);
 		}
 
-		$base = rtrim( $this->profile->facilitator_url, '/' ) . '/';
-		$raw  = wp_remote_post(
-			$base . ltrim( $endpoint, '/' ),
+		$raw = wp_remote_post(
+			$url,
 			array(
 				'timeout' => self::TIMEOUT,
 				'headers' => $headers,
@@ -167,5 +216,44 @@ final class X402FacilitatorClient implements Facilitator {
 			'body'  => $parsed,
 			'error' => null,
 		);
+	}
+
+	/**
+	 * Pick the right Authorization header for one request:
+	 * - CDP profiles (key id + base64 Ed25519 secret) → fresh per-request JWT.
+	 * - Static-bearer profiles (just `api_key` set) → that bearer.
+	 * - Unauthenticated profiles → no Authorization header.
+	 *
+	 * @return array<string,string>
+	 */
+	private function auth_headers_for( string $method, string $url ): array {
+		if ( FacilitatorProfile::AUTH_CDP_JWT === $this->profile->auth_scheme ) {
+			if ( ! $this->cdp_credentials_complete() ) {
+				throw new \RuntimeException(
+					'Coinbase CDP credentials are not configured.'
+				);
+			}
+			$parts  = wp_parse_url( $url );
+			$host   = (string) ( $parts['host'] ?? '' );
+			$path   = (string) ( $parts['path'] ?? '/' );
+			$signer = new CoinbaseJwtSigner(
+				$this->profile->api_key_id,
+				$this->profile->api_key_secret,
+			);
+			return array( 'Authorization' => 'Bearer ' . $signer->sign( $method, $host, $path ) );
+		}
+		if ( '' !== $this->profile->api_key ) {
+			return array( 'Authorization' => 'Bearer ' . $this->profile->api_key );
+		}
+		return array();
+	}
+
+	private function uses_cdp_jwt(): bool {
+		return FacilitatorProfile::AUTH_CDP_JWT === $this->profile->auth_scheme
+			&& $this->cdp_credentials_complete();
+	}
+
+	private function cdp_credentials_complete(): bool {
+		return '' !== $this->profile->api_key_id && '' !== $this->profile->api_key_secret;
 	}
 }
