@@ -448,8 +448,6 @@ function PaywallScopeCard( {
 	termId,
 	setTermId,
 	onPaywallFieldsChange,
-	beginPaywallSaveProbeSession,
-	runPaywallProbeFollowThrough,
 } ) {
 	const { saving, error, run } = useSave();
 
@@ -459,19 +457,12 @@ function PaywallScopeCard( {
 
 	const onSave = () =>
 		run( async () => {
-			const rid = beginPaywallSaveProbeSession();
-
-			const { values: merged, ajaxData: data } = await save( {
+			const { values: merged } = await save( {
 				paywall_mode: paywallMode,
 				paywall_category_term_id: termId,
 			} );
 			setPaywallMode( merged.paywall_mode );
 			setTermId( merged.paywall_category_term_id );
-
-			if ( ! Object.prototype.hasOwnProperty.call( data, 'probe' ) ) {
-				return;
-			}
-			await runPaywallProbeFollowThrough( data.probe, rid, merged );
 		} );
 
 	return (
@@ -660,7 +651,6 @@ function FacilitatorCard( {
 	slots,
 	setSlots,
 	onFacilitatorFormChange,
-	onFacilitatorSaveComplete,
 } ) {
 	const { saving, error, run } = useSave();
 
@@ -771,7 +761,6 @@ function FacilitatorCard( {
 			}
 			setPendingSecret( '' );
 			setReplaceOpen( false );
-			await onFacilitatorSaveComplete( merged );
 		} );
 
 	const facilitatorSubtitle =
@@ -1021,13 +1010,6 @@ function SettingsApp() {
 		setPaywallCheck( null );
 	};
 
-	const beginPaywallSaveProbeSession = () => {
-		const rid = ++adminChecksRequestId.current;
-		setRunChecksPending( false );
-		setPaywallCheck( null );
-		return rid;
-	};
-
 	const runFacilitatorStepForRid = async ( rid, connectorId ) => {
 		setFacilitatorCheck( { pending: true } );
 		try {
@@ -1189,22 +1171,11 @@ function SettingsApp() {
 		}
 	};
 
-	const onFacilitatorSaveComplete = async ( merged ) => {
-		const rid = ++adminChecksRequestId.current;
-		setRunChecksPending( false );
-		setFacilitatorCheck( null );
-		const id = merged.selected_facilitator_id || '';
-		if ( ! id ) {
-			return;
-		}
-		await runFacilitatorStepForRid( rid, id );
-	};
-
 	// Shared save engine. Fires one AJAX call, merges the server-canonical
 	// response into `saved` so every card's isDirty check is evaluated against
 	// whatever the sanitizer actually stored (which may differ from what we
-	// sent, e.g. bad prices → 0.01). Returns `{ values, ajaxData }` so cards
-	// can run follow-up checks (e.g. paywall probe) without a second request.
+	// sent, e.g. bad prices → 0.01). Returns `{ values, ajaxData }` so the
+	// Run checks button can read fresh values without a second request.
 	const save = async ( partial ) => {
 		const data = await saveFields( partial );
 		let mergedValues;
@@ -1249,8 +1220,6 @@ function SettingsApp() {
 					termId={ termId }
 					setTermId={ setTermId }
 					onPaywallFieldsChange={ invalidateChecksFromFormEdit }
-					beginPaywallSaveProbeSession={ beginPaywallSaveProbeSession }
-					runPaywallProbeFollowThrough={ runPaywallProbeFollowThrough }
 				/>
 				<AudienceCard saved={ saved } save={ save } />
 				<PricingCard saved={ saved } save={ save } />
@@ -1262,7 +1231,6 @@ function SettingsApp() {
 					slots={ slots }
 					setSlots={ setSlots }
 					onFacilitatorFormChange={ invalidateChecksFromFormEdit }
-					onFacilitatorSaveComplete={ onFacilitatorSaveComplete }
 				/>
 				<RunChecksCard
 					paywallDirty={ paywallDirty }
