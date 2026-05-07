@@ -662,6 +662,15 @@ final class PaywallController {
 		flex-direction: column;
 		gap: 8px;
 	}
+	/* Each provider slot can render multiple children (e.g. the EVM-wallet
+	   slot stacks detected wallets + a "or get a wallet" divider + install
+	   links). Reproduce the parent gap so spacing stays consistent
+	   regardless of slot child count. */
+	.sx402-providers > div {
+		display: flex;
+		flex-direction: column;
+		gap: 8px;
+	}
 	/* Social-login-style list row: each wallet/provider is one button with
 	   its icon at the left and its name to the right. Equal weight across
 	   providers — no "primary" CTA so detected EIP-6963 wallets and the
@@ -702,6 +711,44 @@ final class PaywallController {
 		border-radius: 6px;
 	}
 	.sx402-pay-label { flex: 1; }
+	/* Trailing meta slot — currently only used by the install-link variant
+	   to render an "external link" arrow, but free for any provider that
+	   wants a small trailing affordance (e.g. "scan QR" badge). */
+	.sx402-pay-meta {
+		flex-shrink: 0;
+		color: var(--sx402-text-faint);
+		font-size: 13px;
+	}
+	/* Install-link variant — visually mirrors the regular wallet row but
+	   renders as an <a> instead of a <button>. The text-decoration reset
+	   keeps anchor styles from leaking through. */
+	.sx402-pay-button--install {
+		text-decoration: none;
+	}
+	.sx402-pay-button--install .sx402-pay-label {
+		color: var(--sx402-text-muted);
+	}
+	/* Section divider rendered above the install links — only appears when
+	   the EvmWallet provider has at least one suggested wallet that wasn't
+	   announced via EIP-6963. The flanking lines are pseudo-elements so
+	   the label sits centred. */
+	.sx402-section-divider {
+		display: flex;
+		align-items: center;
+		gap: 12px;
+		color: var(--sx402-text-faint);
+		font-size: 12px;
+		text-transform: uppercase;
+		letter-spacing: 0.06em;
+		margin: 4px 0;
+	}
+	.sx402-section-divider::before,
+	.sx402-section-divider::after {
+		content: '';
+		flex: 1;
+		height: 1px;
+		background: var(--sx402-border);
+	}
 	.sx402-status {
 		color: var(--sx402-text-muted);
 		font-size: 13px;

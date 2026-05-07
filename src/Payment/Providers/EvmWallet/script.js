@@ -27,6 +27,61 @@
 		'base-sepolia': 84532,
 	};
 
+	// Popular wallets we surface as install links when they're NOT
+	// announced via EIP-6963. Match key is `rdns` (reverse-DNS, the
+	// stable identifier each wallet emits). Icons are rounded brand-
+	// coloured tiles with a path-drawn letter — placeholders that don't
+	// pretend to be the official logos but remain recognisable. Swap
+	// to brand SVGs in a follow-up if needed.
+	var SUGGESTED_WALLETS = [
+		{
+			rdns: 'io.metamask',
+			name: 'MetaMask',
+			installUrl: 'https://metamask.io/download/',
+			icon: ''
+				+ '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24">'
+				+   '<rect width="24" height="24" rx="6" fill="#E2761B"/>'
+				+   '<path d="M7 16l1.5-5.5L7 8.5 9 7l3 1.5L15 7l2 1.5-1.5 2L17 16l-2 1-1.5-2-1.5 1-1.5-1L9 17z" fill="#fff"/>'
+				+ '</svg>',
+		},
+		{
+			rdns: 'me.rainbow',
+			name: 'Rainbow',
+			installUrl: 'https://rainbow.me/download/',
+			icon: ''
+				+ '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24">'
+				+   '<defs>'
+				+     '<linearGradient id="sx402-rb" x1="0" y1="0" x2="1" y2="1">'
+				+       '<stop offset="0" stop-color="#FF4000"/>'
+				+       '<stop offset="0.5" stop-color="#FFB800"/>'
+				+       '<stop offset="1" stop-color="#0894FF"/>'
+				+     '</linearGradient>'
+				+   '</defs>'
+				+   '<rect width="24" height="24" rx="6" fill="url(#sx402-rb)"/>'
+				+   '<path d="M5 19a8 8 0 0 1 8-8M5 15a4 4 0 0 1 4-4" stroke="#fff" stroke-width="1.6" fill="none" stroke-linecap="round"/>'
+				+   '<circle cx="6" cy="18" r="1.2" fill="#fff"/>'
+				+ '</svg>',
+		},
+		{
+			rdns: 'com.coinbase.wallet',
+			name: 'Coinbase Wallet',
+			installUrl: 'https://www.coinbase.com/wallet/downloads',
+			icon: ''
+				+ '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24">'
+				+   '<rect width="24" height="24" rx="6" fill="#0052FF"/>'
+				+   '<circle cx="12" cy="12" r="6" stroke="#fff" stroke-width="1.6" fill="none"/>'
+				+   '<rect x="9.5" y="9.5" width="5" height="5" rx="1" fill="#fff"/>'
+				+ '</svg>',
+		},
+	];
+
+	// How long after the EIP-6963 request to wait before deciding which
+	// suggested wallets are missing. Most wallets respond synchronously,
+	// but a few initialise after the dApp script and announce slightly
+	// later. 500ms is comfortably above the 99th-percentile init time
+	// for popular extensions and well below "the page feels slow."
+	var SUGGESTION_DELAY_MS = 500;
+
 	function randomNonce32() {
 		var arr = new Uint8Array( 32 );
 		crypto.getRandomValues( arr );
@@ -191,6 +246,41 @@
 			renderRow( ev.detail );
 		}
 
+		var suggestionsRendered = false;
+
+		function renderSuggestions() {
+			if ( suggestionsRendered ) return;
+			suggestionsRendered = true;
+
+			var missing = SUGGESTED_WALLETS.filter( function ( w ) {
+				return ! wallets.has( w.rdns );
+			} );
+			if ( 0 === missing.length ) return;
+
+			// Section divider — only rendered when we have something to
+			// suggest. Empty state is a no-op so detected-wallet users
+			// don't see a vestigial header.
+			var divider = document.createElement( 'div' );
+			divider.className = 'sx402-section-divider';
+			divider.textContent = ( wallets.size > 0 )
+				? 'or get a wallet'
+				: 'don’t have a wallet?';
+			host.container.appendChild( divider );
+
+			missing.forEach( function ( w ) {
+				var link = document.createElement( 'a' );
+				link.className = 'sx402-pay-button sx402-pay-button--install';
+				link.href = w.installUrl;
+				link.target = '_blank';
+				link.rel = 'noopener noreferrer';
+				link.innerHTML = ''
+					+ '<span class="sx402-pay-icon" aria-hidden="true">' + w.icon + '</span>'
+					+ '<span class="sx402-pay-label">Get ' + w.name + '</span>'
+					+ '<span class="sx402-pay-meta" aria-hidden="true">↗</span>';
+				host.container.appendChild( link );
+			} );
+		}
+
 		// Listen first, then ask. Wallets respond synchronously to the
 		// request, so attaching the listener before dispatching avoids
 		// missing the immediate replies.
@@ -201,5 +291,12 @@
 		// themselves spontaneously. Keep the listener attached for the
 		// lifetime of the page — providers cleaned up when the page
 		// unloads. No teardown logic needed.
+
+		// Wait briefly for late announcements before deciding which
+		// suggested wallets are missing. If a wallet announces after the
+		// suggestions render it just won't be deduped from the install
+		// list, which is a minor cosmetic glitch — not worth the
+		// additional teardown logic.
+		setTimeout( renderSuggestions, SUGGESTION_DELAY_MS );
 	} );
 } )();
