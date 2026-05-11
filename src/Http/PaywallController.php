@@ -187,7 +187,7 @@ final class PaywallController {
 			$rule['description']
 		);
 
-		$signature_header = (string) ( $request['headers']['Payment-Signature'] ?? '' );
+		$signature_header = (string) ( $request['headers']['X-Payment'] ?? '' );
 		if ( '' === $signature_header ) {
 			$this->respond_402( $request, $requirements, $rule, array( 'error' => 'payment_required' ) );
 			return;
@@ -240,6 +240,18 @@ final class PaywallController {
 			$this->emit_grant_response_headers( $token, $request['path'], $rule['ttl'] );
 		}
 
+		$receipt = X402HeaderCodec::encode(
+			array(
+				'success'     => true,
+				'transaction' => (string) ( $settle['transaction'] ?? '' ),
+				'network'     => (string) ( $settle['network'] ?? $requirements['network'] ?? '' ),
+				'payer'       => $wallet,
+			)
+		);
+		if ( '' !== $receipt ) {
+			$GLOBALS['__x402press_response']['success_headers'][] = 'X-Payment-Response: ' . $receipt;
+		}
+
 		$this->settlement_notifier()->notify(
 			array(
 				'connector_id' => $this->settings->selected_facilitator_id(),
@@ -258,27 +270,28 @@ final class PaywallController {
 	/**
 	 * Emit a 402 response via the response buffer (JSON or HTML body per client profile).
 	 *
+	 * Body shape matches the x402 spec: `{ x402Version: 1, error, accepts: [<PaymentRequirements>] }`.
+	 * No `payment-required` response header is emitted — the spec carries everything in the body.
+	 *
 	 * @param array $request      Paywall request (uses post_id for HTML excerpt).
-	 * @param array $requirements Encoded x402 requirements.
+	 * @param array $requirements Encoded x402 PaymentRequirements.
 	 * @param array $rule         Resolved rule with at least `price` (decimal USDC) and `ttl` (grant lifetime, seconds).
-	 * @param array $body         Extra keys (e.g. error); must not use keys `requirements` or `price`.
+	 * @param array $body         Extra keys (e.g. error, reason); must not use reserved keys `x402Version` or `accepts`.
 	 */
 	private function respond_402( array $request, array $requirements, array $rule, array $body ): void {
 		nocache_headers();
 		status_header( 402 );
-		$GLOBALS['__x402press_response']['headers']['PAYMENT-REQUIRED'] = X402HeaderCodec::encode( $requirements );
 
-		$price = (string) ( $rule['price'] ?? '' );
 		if ( $this->should_serve_html_402_body() ) {
 			$GLOBALS['__x402press_response']['headers']['Content-Type'] = 'text/html; charset=UTF-8';
 			$GLOBALS['__x402press_response']['body']                    = $this->build_html_402_body( $request, $requirements, $rule, $body );
 		} else {
 			$GLOBALS['__x402press_response']['headers']['Content-Type'] = 'application/json';
-			// Use array union (+), not array_merge: keys in $body must not overwrite requirements/price.
+			// Array union (+): callers' keys can't override the spec-required envelope.
 			$GLOBALS['__x402press_response']['body'] = wp_json_encode(
 				array(
-					'requirements' => $requirements,
-					'price'        => $price,
+					'x402Version' => 1,
+					'accepts'     => array( $requirements ),
 				) + $body
 			);
 		}
@@ -336,7 +349,7 @@ final class PaywallController {
 		$hint_line       = '' !== $providers_block
 			? '' // The CTA replaces the developer-facing hint.
 			: '<p class="x402press-hint">'
-				. esc_html__( 'x402 payment instructions are in the PAYMENT-REQUIRED HTTP response header.', 'x402press' )
+				. esc_html__( 'x402 payment instructions are in the JSON response body (the spec-standard 402 envelope).', 'x402press' )
 				. '</p>';
 
 		$price_block = '<div class="x402press-price-card">'
@@ -495,7 +508,7 @@ final class PaywallController {
 	 * `<div data-x402press-provider="…">` slot plus a `<script src="…">` tag; the
 	 * host loader walks the slots once registrations are in. Returns an empty
 	 * string if no providers are eligible, so the controller falls back to the
-	 * developer-facing PAYMENT-REQUIRED hint.
+	 * developer-facing JSON-body hint.
 	 *
 	 * @param array<string,mixed> $request
 	 * @param array<string,mixed> $requirements
@@ -860,7 +873,7 @@ CSS;
 	}
 
 	/**
-	 * Pull the paying wallet from a decoded PAYMENT-SIGNATURE payload.
+	 * Pull the paying wallet from a decoded X-PAYMENT payload.
 	 */
 	private function extract_wallet( array $payload ): string {
 		return (string) (

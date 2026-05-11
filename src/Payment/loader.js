@@ -30,8 +30,8 @@
 
 	/**
 	 * Wrap a provider's `{ scheme, payload }` in the x402 envelope, replay the
-	 * paywalled URL with the resulting Payment-Signature header, and either
-	 * swap the document on success or surface the facilitator's error.
+	 * paywalled URL with the resulting X-PAYMENT header, and either swap the
+	 * document on success or surface the facilitator's error.
 	 */
 	async function retry( signedFragment ) {
 		setStatus( 'Settling payment…' );
@@ -43,7 +43,7 @@
 		};
 		var headerVal = btoa( JSON.stringify( envelope ) );
 		var resp = await fetch( ctx.resourceUrl, {
-			headers: { 'Payment-Signature': headerVal },
+			headers: { 'X-PAYMENT': headerVal },
 			credentials: 'same-origin',
 			cache: 'no-store',
 		} );

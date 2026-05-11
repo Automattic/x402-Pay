@@ -6,7 +6,7 @@
  * announced icon + name. On click, builds the EIP-3009
  * `TransferWithAuthorization` typed data, asks the announced provider to
  * sign it, and hands the signature to the host's `retry()` so the original
- * request is replayed with `Payment-Signature`. Mirrors what
+ * request is replayed with `X-PAYMENT`. Mirrors what
  * `scripts/pay.mjs` does in Node, but uses raw `provider.request` calls
  * instead of viem.
  *
