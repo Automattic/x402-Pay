@@ -87,6 +87,13 @@ Simple x402 ships with two connectors out of the box: `simple_x402_test`, which 
 
 **Managed receiving address:** Extensions may filter `simple_x402_managed_pool_pay_to` so `payTo` bypasses the per-site wallet field. **Settlement reporting:** after a successful settle, the plugin fires `simple_x402_payment_settled` and may POST to a URL from the `simple_x402_ledger_report_url` filter (see `SimpleX402\Services\FacilitatorHooks`). The ledger (or any hook subscriber that persists externally) should de-duplicate on `transaction`; the plugin may deliver the same settlement more than once under retries or concurrency.
 
+## External services
+
+The plugin talks to two external facilitator endpoints, and only when a request hits a paywalled URL with a `Payment-Signature` header (or when an admin clicks **Test connection**). Installing the plugin without picking a paywall mode triggers no outbound calls.
+
+- **x402.org (Test network)** — `https://x402.org/facilitator/`. Default for new installs. Sends PaymentRequirements (receiving wallet, amount, asset, network, resource URL) and the paying client's PaymentPayload. Public testnet only — not for production.
+- **Coinbase Developer Platform** — `https://api.cdp.coinbase.com/platform/v2/x402/`. Active only when an admin selects the Coinbase CDP connector. Sends the same payload plus a CDP-signed JWT. [Terms](https://www.coinbase.com/legal/cloud) · [Privacy](https://www.coinbase.com/legal/privacy).
+
 ## Suggested improvements
 
 - **Search-engine bots** — Today, detected crawlers get the same JSON 402 as other clients, which may hurt indexing. Consider treating verified search bots differently, e.g. returning `200` with a short excerpt, summary, or `meta description` in the body instead of a bare 402 (policy and implementation TBD).
