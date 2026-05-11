@@ -28,8 +28,9 @@ cp simple-x402.php "${root}/"
 cp -R src "${root}/"
 cp -RL vendor "${root}/"
 cp -R assets/build "${root}/assets/"
-[[ -f README.md ]] && cp README.md "${root}/"
-[[ -f LICENSE ]]   && cp LICENSE   "${root}/"
+[[ -f readme.txt ]] && cp readme.txt "${root}/"
+[[ -f README.md ]]  && cp README.md  "${root}/"
+[[ -f LICENSE ]]    && cp LICENSE    "${root}/"
 
 rm -f "${zipdest}"
 ( cd "${tmp}" && zip -qr "${zipdest}" simple-x402 -x '*.DS_Store' )
