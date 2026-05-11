@@ -26,6 +26,9 @@ root="${tmp}/simple-x402"
 mkdir -p "${root}/assets"
 cp simple-x402.php "${root}/"
 cp -R src "${root}/"
+# Prune dangling symlinks left over from local path-repo dev (e.g. companion
+# plugins) so `cp -RL` doesn't fail trying to follow them.
+find vendor -type l ! -exec test -e {} \; -delete 2>/dev/null || true
 cp -RL vendor "${root}/"
 cp -R assets/build "${root}/assets/"
 [[ -f readme.txt ]] && cp readme.txt "${root}/"
