@@ -85,10 +85,9 @@ Coinbase CDP secrets are stored in their own `wp_options` row, or can be supplie
 
 == Screenshots ==
 
-1. Settings → Simple x402: paywall mode, audience, category, and price.
-2. Facilitator picker: choosing between the built-in x402.org test connector and Coinbase CDP.
-3. Coinbase CDP credential entry with API Key ID and secret fields.
-4. Admin bar indicator on a paywalled post showing the current price and audience.
+1. Choose paywall scope, audience, and price from a single Settings page.
+2. Switch to Coinbase CDP to accept USDC on Base mainnet using your CDP API key.
+3. The paywall page a human reader sees, with pay buttons for popular wallets.
 
 == Changelog ==
 

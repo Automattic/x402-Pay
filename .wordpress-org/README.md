@@ -15,7 +15,6 @@ The directory in the plugin zip itself is `assets/` (built JS/CSS). Keep these t
 | `screenshot-1.png` | any | Matches `== Screenshots ==` slot 1 in `readme.txt`. PNG or JPG. |
 | `screenshot-2.png` | any | Slot 2. |
 | `screenshot-3.png` | any | Slot 3. |
-| `screenshot-4.png` | any | Slot 4. |
 
 `icon.svg` is also accepted in place of the PNG icons and is preferred when the artwork is vector.
 
