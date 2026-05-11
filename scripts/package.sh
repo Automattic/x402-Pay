@@ -26,10 +26,16 @@ root="${tmp}/simple-x402"
 mkdir -p "${root}/assets"
 cp simple-x402.php "${root}/"
 cp -R src "${root}/"
+# Prune dangling symlinks left over from local path-repo dev (e.g. companion
+# plugins) so `cp -RL` doesn't fail trying to follow them, then drop any
+# namespace directory that's now empty as a result.
+find vendor -type l ! -exec test -e {} \; -delete 2>/dev/null || true
+find vendor -mindepth 1 -type d -empty -delete 2>/dev/null || true
 cp -RL vendor "${root}/"
 cp -R assets/build "${root}/assets/"
-[[ -f README.md ]] && cp README.md "${root}/"
-[[ -f LICENSE ]]   && cp LICENSE   "${root}/"
+[[ -f readme.txt ]] && cp readme.txt "${root}/"
+[[ -f README.md ]]  && cp README.md  "${root}/"
+[[ -f LICENSE ]]    && cp LICENSE    "${root}/"
 
 rm -f "${zipdest}"
 ( cd "${tmp}" && zip -qr "${zipdest}" simple-x402 -x '*.DS_Store' )
