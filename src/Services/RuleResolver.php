@@ -39,7 +39,7 @@ final class RuleResolver {
 		}
 
 		$price = isset( $raw['price'] ) ? (string) $raw['price'] : '';
-		if ( ! is_numeric( $price ) || (float) $price <= 0 ) {
+		if ( ! PriceSanitizer::is_valid( $price ) ) {
 			return null;
 		}
 

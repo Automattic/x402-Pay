@@ -838,7 +838,7 @@ CSS;
 	 * the same site can't accidentally redeem it.
 	 */
 	private function emit_grant_response_headers( string $token, string $path, int $ttl ): void {
-		$cookie_path = '' !== $path ? $path : '/';
+		$cookie_path = $this->sanitize_cookie_path( '' !== $path ? $path : '/' );
 		$cookie      = sprintf(
 			'%s=%s; Max-Age=%d; Path=%s; Secure; HttpOnly; SameSite=Strict',
 			self::GRANT_COOKIE,
@@ -848,6 +848,15 @@ CSS;
 		);
 		$GLOBALS['__sx402_response']['success_headers'][] = self::GRANT_HEADER . ': ' . $token;
 		$GLOBALS['__sx402_response']['success_headers'][] = 'Set-Cookie: ' . $cookie;
+	}
+
+	private function sanitize_cookie_path( string $path ): string {
+		$path = '' !== $path && str_starts_with( $path, '/' ) ? $path : '/';
+		return (string) preg_replace_callback(
+			'/[\x00-\x20\x7f;]/',
+			static fn ( array $cookie_path_char ): string => rawurlencode( $cookie_path_char[0] ),
+			$path
+		);
 	}
 
 	/**

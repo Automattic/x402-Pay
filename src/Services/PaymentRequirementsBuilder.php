@@ -58,7 +58,7 @@ final class PaymentRequirementsBuilder {
 	 * Convert a decimal string amount into base units (atomic token units).
 	 */
 	private function to_base_units( string $decimal ): string {
-		if ( ! is_numeric( $decimal ) || (float) $decimal <= 0 ) {
+		if ( ! PriceSanitizer::is_fixed_decimal( $decimal ) ) {
 			return '0';
 		}
 		[ $whole, $frac ] = array_pad( explode( '.', $decimal, 2 ), 2, '' );

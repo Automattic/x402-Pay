@@ -11,6 +11,7 @@ namespace SimpleX402\Settings;
 
 use SimpleX402\Http\PaywallController;
 use SimpleX402\Services\FacilitatorHooks;
+use SimpleX402\Services\PriceSanitizer;
 
 /**
  * Thin wrapper around a single wp_options row.
@@ -435,10 +436,6 @@ final class SettingsRepository {
 	}
 
 	private function sanitize_price( mixed $raw ): string {
-		$price = trim( (string) $raw );
-		if ( ! is_numeric( $price ) || (float) $price <= 0 ) {
-			return self::DEFAULT_PRICE;
-		}
-		return $price;
+		return PriceSanitizer::sanitize( $raw, self::DEFAULT_PRICE );
 	}
 }
