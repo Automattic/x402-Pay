@@ -83,6 +83,13 @@ No. x402 uses EIP-3009 `transferWithAuthorization`; the facilitator pays gas. Yo
 
 Coinbase CDP secrets are stored in their own `wp_options` row, or can be supplied via a `wp-config.php` constant or environment variable so they stay out of the database entirely.
 
+== Screenshots ==
+
+1. Settings → Simple x402: paywall mode, audience, category, and price.
+2. Facilitator picker: choosing between the built-in x402.org test connector and Coinbase CDP.
+3. Coinbase CDP credential entry with API Key ID and secret fields.
+4. Admin bar indicator on a paywalled post showing the current price and audience.
+
 == Changelog ==
 
 = 0.1.0 =
