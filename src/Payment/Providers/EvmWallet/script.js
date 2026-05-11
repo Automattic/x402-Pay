@@ -193,6 +193,9 @@
 
 			var labelSpan = document.createElement( 'span' );
 			labelSpan.className = 'sx402-pay-label';
+			// Match the "Pay with <provider>" pattern the built-in Gravatar
+			// row uses, so detected wallets and built-in providers read the
+			// same in the list.
 			labelSpan.textContent = ( typeof info.name === 'string' && info.name )
 				? 'Pay with ' + info.name
 				: 'Pay with this wallet';
