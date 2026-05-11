@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
-<ruleset name="simple-x402">
-    <description>Coding standards for the Simple x402 plugin.</description>
-    <file>simple-x402.php</file>
+<ruleset name="x402press">
+    <description>Coding standards for the x402press plugin.</description>
+    <file>x402press.php</file>
     <file>src</file>
     <arg name="extensions" value="php"/>
     <arg name="colors"/>
@@ -16,7 +16,7 @@
     <rule ref="WordPress.WP.I18n">
         <properties>
             <property name="text_domain" type="array">
-                <element value="simple-x402"/>
+                <element value="x402press"/>
             </property>
         </properties>
     </rule>

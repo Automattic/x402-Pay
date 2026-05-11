@@ -2,14 +2,14 @@
 /**
  * EIP-6963 EVM wallet provider registration.
  *
- * @package SimpleX402
+ * @package X402Press
  */
 
 declare(strict_types=1);
 
-namespace SimpleX402\Payment\Providers\EvmWallet;
+namespace X402Press\Payment\Providers\EvmWallet;
 
-use SimpleX402\Payment\PaymentProviderRegistry;
+use X402Press\Payment\PaymentProviderRegistry;
 
 /**
  * Renders one row per browser-extension wallet that announces itself via the
@@ -44,8 +44,8 @@ final class Provider {
 	public static function register_provider( array $providers, array $context ): array {
 		$providers[] = array(
 			'id'          => self::PROVIDER_ID,
-			'label'       => __( 'Pay with a browser wallet', 'simple-x402' ),
-			'script_url'  => plugins_url( 'src/Payment/Providers/EvmWallet/script.js', SIMPLE_X402_FILE ),
+			'label'       => __( 'Pay with a browser wallet', 'x402press' ),
+			'script_url'  => plugins_url( 'src/Payment/Providers/EvmWallet/script.js', X402PRESS_FILE ),
 			'is_eligible' => true,
 			// EIP-6963 detection itself is purely client-side, but the
 			// install-suggestion rows show official brand SVGs for popular
@@ -67,7 +67,7 @@ final class Provider {
 	 * @return array<string,string>
 	 */
 	private static function suggestion_icon_urls(): array {
-		$base = plugins_url( 'src/Payment/Providers/EvmWallet/icons/', SIMPLE_X402_FILE );
+		$base = plugins_url( 'src/Payment/Providers/EvmWallet/icons/', X402PRESS_FILE );
 		return array(
 			'io.metamask'         => $base . 'metamask.svg',
 			'me.rainbow'          => $base . 'rainbow.svg',

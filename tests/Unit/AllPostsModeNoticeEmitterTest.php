@@ -1,18 +1,18 @@
 <?php
 declare(strict_types=1);
 
-namespace SimpleX402\Tests\Unit;
+namespace X402Press\Tests\Unit;
 
 use PHPUnit\Framework\TestCase;
-use SimpleX402\Services\AllPostsModeNoticeEmitter;
-use SimpleX402\Services\SettingsChangeNotifier;
+use X402Press\Services\AllPostsModeNoticeEmitter;
+use X402Press\Services\SettingsChangeNotifier;
 
 final class AllPostsModeNoticeEmitterTest extends TestCase {
 
 	private AllPostsModeNoticeEmitter $emitter;
 
 	protected function setUp(): void {
-		$GLOBALS['__sx402_settings_errors'] = array();
+		$GLOBALS['__x402press_settings_errors'] = array();
 		$this->emitter = new AllPostsModeNoticeEmitter( new SettingsChangeNotifier() );
 	}
 
@@ -21,8 +21,8 @@ final class AllPostsModeNoticeEmitterTest extends TestCase {
 			array( 'paywall_mode' => 'category' ),
 			array( 'paywall_mode' => 'all-posts' )
 		);
-		$codes = array_column( $GLOBALS['__sx402_settings_errors'], 'code' );
-		$this->assertContains( 'simple_x402_all_posts_mode', $codes );
+		$codes = array_column( $GLOBALS['__x402press_settings_errors'], 'code' );
+		$this->assertContains( 'x402press_all_posts_mode', $codes );
 	}
 
 	public function test_does_not_emit_when_mode_already_all_posts(): void {
@@ -30,7 +30,7 @@ final class AllPostsModeNoticeEmitterTest extends TestCase {
 			array( 'paywall_mode' => 'all-posts' ),
 			array( 'paywall_mode' => 'all-posts' )
 		);
-		$this->assertSame( array(), $GLOBALS['__sx402_settings_errors'] );
+		$this->assertSame( array(), $GLOBALS['__x402press_settings_errors'] );
 	}
 
 	public function test_does_not_emit_when_mode_stays_category(): void {
@@ -38,18 +38,18 @@ final class AllPostsModeNoticeEmitterTest extends TestCase {
 			array( 'paywall_mode' => 'category' ),
 			array( 'paywall_mode' => 'category' )
 		);
-		$this->assertSame( array(), $GLOBALS['__sx402_settings_errors'] );
+		$this->assertSame( array(), $GLOBALS['__x402press_settings_errors'] );
 	}
 
 	public function test_ignores_non_array_new_value(): void {
 		( $this->emitter )( array( 'paywall_mode' => 'category' ), 'garbage' );
-		$this->assertSame( array(), $GLOBALS['__sx402_settings_errors'] );
+		$this->assertSame( array(), $GLOBALS['__x402press_settings_errors'] );
 	}
 
 	public function test_treats_non_array_old_value_as_first_save(): void {
 		// First save sets mode=all-posts — old_value is `false` from WP.
 		( $this->emitter )( false, array( 'paywall_mode' => 'all-posts' ) );
-		$codes = array_column( $GLOBALS['__sx402_settings_errors'], 'code' );
-		$this->assertContains( 'simple_x402_all_posts_mode', $codes );
+		$codes = array_column( $GLOBALS['__x402press_settings_errors'], 'code' );
+		$this->assertContains( 'x402press_all_posts_mode', $codes );
 	}
 }

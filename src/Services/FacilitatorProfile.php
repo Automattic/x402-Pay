@@ -2,14 +2,14 @@
 /**
  * x402 facilitator + network + asset configuration.
  *
- * @package SimpleX402
+ * @package X402Press
  */
 
 declare(strict_types=1);
 
-namespace SimpleX402\Services;
+namespace X402Press\Services;
 
-use SimpleX402\Facilitator\RequestSigner;
+use X402Press\Facilitator\RequestSigner;
 
 /**
  * Bundles every constant needed to produce PaymentRequirements and talk to a

@@ -1,15 +1,15 @@
 <?php
 declare(strict_types=1);
 
-namespace SimpleX402\Tests\Unit;
+namespace X402Press\Tests\Unit;
 
 use PHPUnit\Framework\TestCase;
-use SimpleX402\Services\GrantStore;
+use X402Press\Services\GrantStore;
 
 final class GrantStoreTest extends TestCase {
 
 	protected function setUp(): void {
-		$GLOBALS['__sx402_transients'] = array();
+		$GLOBALS['__x402press_transients'] = array();
 	}
 
 	public function test_redeem_false_for_unknown_token(): void {
@@ -60,7 +60,7 @@ final class GrantStoreTest extends TestCase {
 		// The transient blob the DB holds should never reveal the redeemable
 		// secret — anyone with read access to wp_options/wp_transients
 		// shouldn't be able to bypass paywalls.
-		$serialised = serialize( $GLOBALS['__sx402_transients'] );
+		$serialised = serialize( $GLOBALS['__x402press_transients'] );
 		$this->assertStringNotContainsString( $token, $serialised );
 	}
 }

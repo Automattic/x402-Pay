@@ -2,14 +2,14 @@
 /**
  * Coinbase-specific FacilitatorProfile factory.
  *
- * @package SimpleX402
+ * @package X402Press
  */
 
 declare(strict_types=1);
 
-namespace SimpleX402\Connectors\Coinbase;
+namespace X402Press\Connectors\Coinbase;
 
-use SimpleX402\Services\FacilitatorProfile;
+use X402Press\Services\FacilitatorProfile;
 
 /**
  * Constructs the Base-mainnet-USDC profile for Coinbase's CDP x402 facilitator

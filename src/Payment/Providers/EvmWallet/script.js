@@ -13,8 +13,8 @@
  * Spec: https://eips.ethereum.org/EIPS/eip-6963
  */
 ( function () {
-	if ( ! window.simpleX402 || typeof window.simpleX402.registerProvider !== 'function' ) {
-		console.error( '[sx402] evm-wallet provider loaded before host; skipping.' );
+	if ( ! window.x402press || typeof window.x402press.registerProvider !== 'function' ) {
+		console.error( '[x402press] evm-wallet provider loaded before host; skipping.' );
 		return;
 	}
 
@@ -117,7 +117,7 @@
 		return { typedData: typedData, authorization: authorization };
 	}
 
-	window.simpleX402.registerProvider( 'evm-wallet', function ( host ) {
+	window.x402press.registerProvider( 'evm-wallet', function ( host ) {
 		// Wallets keyed by `rdns` (reverse-DNS identifier — stable across
 		// versions, unique per extension). Lets multiple installs of the
 		// same wallet — or wallets that announce twice — collapse to one row.
@@ -174,14 +174,14 @@
 
 			var button = document.createElement( 'button' );
 			button.type = 'button';
-			button.className = 'sx402-pay-button';
+			button.className = 'x402press-pay-button';
 			button.setAttribute( 'data-wallet-rdns', key );
 
 			// The wallet's own icon (typically a data URI). Rendering it
-			// inside `.sx402-pay-icon` picks up the existing border-radius
+			// inside `.x402press-pay-icon` picks up the existing border-radius
 			// so EIP-6963 wallets line up visually with built-in providers.
 			var iconSpan = document.createElement( 'span' );
-			iconSpan.className = 'sx402-pay-icon';
+			iconSpan.className = 'x402press-pay-icon';
 			iconSpan.setAttribute( 'aria-hidden', 'true' );
 			if ( typeof info.icon === 'string' && info.icon ) {
 				var img = document.createElement( 'img' );
@@ -192,7 +192,7 @@
 			button.appendChild( iconSpan );
 
 			var labelSpan = document.createElement( 'span' );
-			labelSpan.className = 'sx402-pay-label';
+			labelSpan.className = 'x402press-pay-label';
 			labelSpan.textContent = ( typeof info.name === 'string' && info.name )
 				? 'Pay with ' + info.name
 				: 'Pay with this wallet';
@@ -225,7 +225,7 @@
 			// suggest. Empty state is a no-op so detected-wallet users
 			// don't see a vestigial header.
 			var divider = document.createElement( 'div' );
-			divider.className = 'sx402-section-divider';
+			divider.className = 'x402press-section-divider';
 			divider.textContent = ( wallets.size > 0 )
 				? 'or get a wallet'
 				: 'don’t have a wallet?';
@@ -235,19 +235,19 @@
 
 			missing.forEach( function ( w ) {
 				var link = document.createElement( 'a' );
-				link.className = 'sx402-pay-button sx402-pay-button--install';
+				link.className = 'x402press-pay-button x402press-pay-button--install';
 				link.href = w.installUrl;
 				link.target = '_blank';
 				link.rel = 'noopener noreferrer';
 
 				var iconHtml = iconUrls[ w.rdns ]
-					? '<span class="sx402-pay-icon" aria-hidden="true"><img src="'
+					? '<span class="x402press-pay-icon" aria-hidden="true"><img src="'
 						+ iconUrls[ w.rdns ] + '" alt=""></span>'
 					: '';
 				link.innerHTML = ''
 					+ iconHtml
-					+ '<span class="sx402-pay-label">Install ' + w.name + '</span>'
-					+ '<span class="sx402-pay-meta" aria-hidden="true">↗</span>';
+					+ '<span class="x402press-pay-label">Install ' + w.name + '</span>'
+					+ '<span class="x402press-pay-meta" aria-hidden="true">↗</span>';
 				host.container.appendChild( link );
 			} );
 		}

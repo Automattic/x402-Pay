@@ -1,18 +1,18 @@
 <?php
 declare(strict_types=1);
 
-namespace SimpleX402\Tests\Unit;
+namespace X402Press\Tests\Unit;
 
 use PHPUnit\Framework\TestCase;
-use SimpleX402\Services\FacilitatorHooks;
-use SimpleX402\Services\PaymentSettlementNotifier;
+use X402Press\Services\FacilitatorHooks;
+use X402Press\Services\PaymentSettlementNotifier;
 
 final class PaymentSettlementNotifierTest extends TestCase {
 
 	protected function setUp(): void {
-		$GLOBALS['__sx402_actions'] = array();
-		$GLOBALS['__sx402_filters'] = array();
-		$GLOBALS['__sx402_http']    = null;
+		$GLOBALS['__x402press_actions'] = array();
+		$GLOBALS['__x402press_filters'] = array();
+		$GLOBALS['__x402press_http']    = null;
 	}
 
 	public function test_each_notify_fires_action_even_when_transaction_repeated(): void {
@@ -51,9 +51,9 @@ final class PaymentSettlementNotifierTest extends TestCase {
 		);
 		( new PaymentSettlementNotifier() )->notify( $ctx );
 
-		$this->assertIsArray( $GLOBALS['__sx402_http'] );
-		$this->assertSame( $ledger, $GLOBALS['__sx402_http']['url'] );
-		$args = $GLOBALS['__sx402_http']['args'];
+		$this->assertIsArray( $GLOBALS['__x402press_http'] );
+		$this->assertSame( $ledger, $GLOBALS['__x402press_http']['url'] );
+		$args = $GLOBALS['__x402press_http']['args'];
 		$this->assertSame( 5, $args['timeout'] );
 		$this->assertFalse( $args['blocking'] );
 		$this->assertSame( array( 'Content-Type' => 'application/json' ), $args['headers'] );
@@ -61,8 +61,8 @@ final class PaymentSettlementNotifierTest extends TestCase {
 	}
 
 	public function test_skips_wp_remote_post_when_ledger_url_filter_returns_empty(): void {
-		$GLOBALS['__sx402_http'] = null;
+		$GLOBALS['__x402press_http'] = null;
 		( new PaymentSettlementNotifier() )->notify( array( 'post_id' => 1 ) );
-		$this->assertNull( $GLOBALS['__sx402_http'] );
+		$this->assertNull( $GLOBALS['__x402press_http'] );
 	}
 }

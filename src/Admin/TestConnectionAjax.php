@@ -2,26 +2,26 @@
 /**
  * admin-ajax handler for probing a connector's facilitator.
  *
- * @package SimpleX402
+ * @package X402Press
  */
 
 declare(strict_types=1);
 
-namespace SimpleX402\Admin;
+namespace X402Press\Admin;
 
-use SimpleX402\Facilitator\FacilitatorResolver;
+use X402Press\Facilitator\FacilitatorResolver;
 
 /**
- * Powers the Settings → Simple x402 "Test connection" button.
+ * Powers the Settings → x402press "Test connection" button.
  *
- * Registered on `wp_ajax_simple_x402_test_connector`. Admin-only,
+ * Registered on `wp_ajax_x402press_test_connector`. Admin-only,
  * nonce-checked. Resolves the posted connector_id through FacilitatorResolver
  * and returns the TestResult as JSON.
  */
 final class TestConnectionAjax {
 
-	public const ACTION = 'simple_x402_test_connector';
-	public const NONCE  = 'simple_x402_test_connector_nonce';
+	public const ACTION = 'x402press_test_connector';
+	public const NONCE  = 'x402press_test_connector_nonce';
 
 	public function __construct( private readonly FacilitatorResolver $resolver ) {}
 

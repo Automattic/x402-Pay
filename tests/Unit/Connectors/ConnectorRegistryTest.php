@@ -1,19 +1,19 @@
 <?php
 declare(strict_types=1);
 
-namespace SimpleX402\Tests\Unit\Connectors;
+namespace X402Press\Tests\Unit\Connectors;
 
 use PHPUnit\Framework\TestCase;
-use SimpleX402\Connectors\ConnectorRegistry;
+use X402Press\Connectors\ConnectorRegistry;
 
 final class ConnectorRegistryTest extends TestCase {
 
 	protected function setUp(): void {
-		$GLOBALS['__sx402_connectors'] = array();
+		$GLOBALS['__x402press_connectors'] = array();
 	}
 
 	public function test_facilitators_only_returns_x402_facilitator_type(): void {
-		$GLOBALS['__sx402_connectors'] = array(
+		$GLOBALS['__x402press_connectors'] = array(
 			'anthropic'       => array( 'type' => 'ai_provider' ),
 			'some_facilitator' => array(
 				'type' => ConnectorRegistry::FACILITATOR_TYPE,
@@ -35,7 +35,7 @@ final class ConnectorRegistryTest extends TestCase {
 	}
 
 	public function test_facilitators_returns_empty_when_none_match(): void {
-		$GLOBALS['__sx402_connectors'] = array(
+		$GLOBALS['__x402press_connectors'] = array(
 			'openai' => array( 'type' => 'ai_provider' ),
 		);
 
@@ -43,7 +43,7 @@ final class ConnectorRegistryTest extends TestCase {
 	}
 
 	public function test_facilitator_returns_matching_connector(): void {
-		$GLOBALS['__sx402_connectors'] = array(
+		$GLOBALS['__x402press_connectors'] = array(
 			'some_facilitator' => array(
 				'type' => ConnectorRegistry::FACILITATOR_TYPE,
 				'name' => 'Example x402',
@@ -62,7 +62,7 @@ final class ConnectorRegistryTest extends TestCase {
 	}
 
 	public function test_facilitator_rejects_wrong_type(): void {
-		$GLOBALS['__sx402_connectors'] = array(
+		$GLOBALS['__x402press_connectors'] = array(
 			'anthropic' => array(
 				'type' => 'ai_provider',
 				'name' => 'Anthropic',
@@ -73,7 +73,7 @@ final class ConnectorRegistryTest extends TestCase {
 	}
 
 	public function test_facilitator_returns_null_for_unknown_id(): void {
-		$GLOBALS['__sx402_connectors'] = array();
+		$GLOBALS['__x402press_connectors'] = array();
 
 		$this->assertNull( ( new ConnectorRegistry() )->facilitator( 'missing' ) );
 	}

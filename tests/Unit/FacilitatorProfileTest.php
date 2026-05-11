@@ -1,10 +1,10 @@
 <?php
 declare(strict_types=1);
 
-namespace SimpleX402\Tests\Unit;
+namespace X402Press\Tests\Unit;
 
 use PHPUnit\Framework\TestCase;
-use SimpleX402\Services\FacilitatorProfile;
+use X402Press\Services\FacilitatorProfile;
 
 final class FacilitatorProfileTest extends TestCase {
 

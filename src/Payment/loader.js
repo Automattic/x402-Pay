@@ -1,17 +1,17 @@
 /**
  * x402 payment host loader.
  *
- * Loaded once per 402 page. Exposes window.simpleX402.registerProvider(id, cb)
+ * Loaded once per 402 page. Exposes window.x402press.registerProvider(id, cb)
  * so each enqueued provider script can attach its own button. After all
- * providers register, the host walks every <div data-sx402-provider="..."></div>
+ * providers register, the host walks every <div data-x402press-provider="..."></div>
  * slot and invokes the matching callback with helpers shared across providers
  * (envelope construction, retry fetch, status line, eligibility-mismatch
  * warnings).
  */
 (function () {
-	if ( window.simpleX402 ) return;
+	if ( window.x402press ) return;
 
-	var contextEl = document.getElementById( 'sx402-payment-context' );
+	var contextEl = document.getElementById( 'x402press-payment-context' );
 	if ( ! contextEl ) return;
 
 	var ctx;
@@ -22,7 +22,7 @@
 	}
 
 	var registry = Object.create( null );
-	var statusEl = document.getElementById( 'sx402-status' );
+	var statusEl = document.getElementById( 'x402press-status' );
 
 	function setStatus( msg ) {
 		if ( statusEl ) statusEl.textContent = msg;
@@ -62,9 +62,9 @@
 	}
 
 	function dispatch() {
-		var slots = document.querySelectorAll( '[data-sx402-provider]' );
+		var slots = document.querySelectorAll( '[data-x402press-provider]' );
 		Array.prototype.forEach.call( slots, function ( slot ) {
-			var id = slot.getAttribute( 'data-sx402-provider' );
+			var id = slot.getAttribute( 'data-x402press-provider' );
 			var entry = registry[ id ];
 			if ( ! entry ) return;
 			if ( entry.dispatched ) return;
@@ -80,15 +80,15 @@
 					setStatus: setStatus,
 				} )
 			).catch( function ( err ) {
-				console.error( '[sx402] provider "' + id + '" failed to mount:', err );
+				console.error( '[x402press] provider "' + id + '" failed to mount:', err );
 			} );
 		} );
 	}
 
-	window.simpleX402 = {
+	window.x402press = {
 		registerProvider: function ( id, callback ) {
 			if ( registry[ id ] ) {
-				console.warn( '[sx402] provider "' + id + '" registered twice; ignoring duplicate.' );
+				console.warn( '[x402press] provider "' + id + '" registered twice; ignoring duplicate.' );
 				return;
 			}
 			registry[ id ] = { callback: callback, dispatched: false };

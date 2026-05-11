@@ -2,14 +2,14 @@
 /**
  * Admin-facing notices for plugin settings changes.
  *
- * @package SimpleX402
+ * @package X402Press
  */
 
 declare(strict_types=1);
 
-namespace SimpleX402\Services;
+namespace X402Press\Services;
 
-use SimpleX402\Settings\SettingsRepository;
+use X402Press\Settings\SettingsRepository;
 
 /**
  * Emits `add_settings_error` notices for settings events that benefit from an
@@ -24,11 +24,11 @@ final class SettingsChangeNotifier {
 	 */
 	public function notify_paywall_category_deleted( string $name ): void {
 		$this->emit(
-			'simple_x402_category_deleted',
+			'x402press_category_deleted',
 			'warning',
 			sprintf(
 				/* translators: %s: deleted paywall category name. */
-				__( 'The paywall category "%s" was deleted. Simple x402 has switched to the default paywall category so gating keeps working; update your paywall category in Settings → Simple x402 if you want a different one.', 'simple-x402' ),
+				__( 'The paywall category "%s" was deleted. x402press has switched to the default paywall category so gating keeps working; update your paywall category in Settings → x402press if you want a different one.', 'x402press' ),
 				$name
 			)
 		);
@@ -39,9 +39,9 @@ final class SettingsChangeNotifier {
 	 */
 	public function notify_mode_switched_to_all_posts(): void {
 		$this->emit(
-			'simple_x402_all_posts_mode',
+			'x402press_all_posts_mode',
 			'info',
-			__( 'Every published post is now paywalled.', 'simple-x402' )
+			__( 'Every published post is now paywalled.', 'x402press' )
 		);
 	}
 

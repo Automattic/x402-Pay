@@ -2,17 +2,17 @@
 /**
  * Admin Bar indicator for paywalled frontend views.
  *
- * @package SimpleX402
+ * @package X402Press
  */
 
 declare(strict_types=1);
 
-namespace SimpleX402\Admin;
+namespace X402Press\Admin;
 
-use SimpleX402\Admin\SettingsPage;
-use SimpleX402\Services\DefaultPaywallRule;
-use SimpleX402\Services\RuleResolver;
-use SimpleX402\Settings\SettingsRepository;
+use X402Press\Admin\SettingsPage;
+use X402Press\Services\DefaultPaywallRule;
+use X402Press\Services\RuleResolver;
+use X402Press\Settings\SettingsRepository;
 
 /**
  * Adds a top admin-bar node when an admin is viewing a singular post in the
@@ -21,13 +21,13 @@ use SimpleX402\Settings\SettingsRepository;
  * The resolve context sets {@see DefaultPaywallRule::CTX_KEY_ADMIN_BAR_SCOPE}
  * so the admin bar can show in-scope posts even when audience is "only bots"
  * (human guests are not 402 in that case, but the editor still needs to see
- * which posts the plugin targets). {@see \SimpleX402\Http\PaywallController}
+ * which posts the plugin targets). {@see \X402Press\Http\PaywallController}
  * does not set that key; real 402s are unchanged. The controller still applies
- * the `simple_x402_bypass_paywall` filter for the actual request.
+ * the `x402press_bypass_paywall` filter for the actual request.
  */
 final class PaywallIndicator {
 
-	public const NODE_ID = 'simple-x402-paywalled';
+	public const NODE_ID = 'x402press-paywalled';
 
 	public function __construct(
 		private readonly RuleResolver $rules,
@@ -80,8 +80,8 @@ final class PaywallIndicator {
 				'href'  => admin_url( 'options-general.php?page=' . SettingsPage::MENU_SLUG ),
 				'meta'  => array(
 					'title' => esc_attr__(
-						'This post is in your paywall scope. Open Simple x402 settings for audience, mode, and price.',
-						'simple-x402'
+						'This post is in your paywall scope. Open x402press settings for audience, mode, and price.',
+						'x402press'
 					),
 				),
 			)
@@ -97,7 +97,7 @@ final class PaywallIndicator {
 			return esc_html(
 				sprintf(
 					/* translators: %s: decimal USDC amount (e.g. 0.01). */
-					__( 'Paywalled (bots only, $%s)', 'simple-x402' ),
+					__( 'Paywalled (bots only, $%s)', 'x402press' ),
 					$price
 				)
 			);
@@ -105,7 +105,7 @@ final class PaywallIndicator {
 		return esc_html(
 			sprintf(
 				/* translators: %s: decimal USDC amount (e.g. 0.01). */
-				__( 'Paywalled (everyone, $%s)', 'simple-x402' ),
+				__( 'Paywalled (everyone, $%s)', 'x402press' ),
 				$price
 			)
 		);

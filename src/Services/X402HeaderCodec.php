@@ -2,12 +2,12 @@
 /**
  * Serialises and deserialises x402 PAYMENT-* HTTP header payloads.
  *
- * @package SimpleX402
+ * @package X402Press
  */
 
 declare(strict_types=1);
 
-namespace SimpleX402\Services;
+namespace X402Press\Services;
 
 /**
  * Encodes and decodes base64(JSON) header payloads used by the x402 protocol
