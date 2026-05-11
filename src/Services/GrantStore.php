@@ -2,12 +2,12 @@
 /**
  * Short-lived access grants backed by WordPress transients.
  *
- * @package SimpleX402
+ * @package X402Press
  */
 
 declare(strict_types=1);
 
-namespace SimpleX402\Services;
+namespace X402Press\Services;
 
 /**
  * Issues opaque grant tokens after a successful payment and redeems them on
@@ -24,7 +24,7 @@ namespace SimpleX402\Services;
  */
 final class GrantStore {
 
-	private const PREFIX = 'sx402_gt_';
+	private const PREFIX = 'x402press_gt_';
 
 	/**
 	 * Mint a new grant. Returns the freshly-generated token; the caller

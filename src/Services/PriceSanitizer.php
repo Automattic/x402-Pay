@@ -2,12 +2,12 @@
 /**
  * Canonical price validation for x402 payment amounts.
  *
- * @package SimpleX402
+ * @package X402Press
  */
 
 declare(strict_types=1);
 
-namespace SimpleX402\Services;
+namespace X402Press\Services;
 
 /**
  * Accepts only fixed decimal strings so PaymentRequirements conversion never

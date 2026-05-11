@@ -1,8 +1,8 @@
 {
-	"name": "simple-x402",
+	"name": "x402press",
 	"version": "0.1.0",
 	"private": true,
-	"description": "Build pipeline for the Simple x402 admin UI.",
+	"description": "Build pipeline for the x402press admin UI.",
 	"scripts": {
 		"build": "wp-scripts build --webpack-src-dir=assets/src --output-path=assets/build",
 		"start": "wp-scripts start --webpack-src-dir=assets/src --output-path=assets/build",

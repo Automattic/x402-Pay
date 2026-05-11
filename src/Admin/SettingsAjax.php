@@ -2,21 +2,21 @@
 /**
  * admin-ajax handler for per-card settings saves.
  *
- * @package SimpleX402
+ * @package X402Press
  */
 
 declare(strict_types=1);
 
-namespace SimpleX402\Admin;
+namespace X402Press\Admin;
 
-use SimpleX402\Connectors\ConnectorRegistry;
-use SimpleX402\Services\ConnectorCredentialStore;
-use SimpleX402\Settings\SettingsRepository;
+use X402Press\Connectors\ConnectorRegistry;
+use X402Press\Services\ConnectorCredentialStore;
+use X402Press\Settings\SettingsRepository;
 
 /**
- * Powers the React Settings → Simple x402 per-card "Save changes" buttons.
+ * Powers the React Settings → x402press per-card "Save changes" buttons.
  *
- * Registered on `wp_ajax_simple_x402_save_settings`. Admin-only,
+ * Registered on `wp_ajax_x402press_save_settings`. Admin-only,
  * nonce-checked. Accepts a partial `fields` payload and forwards it to
  * SettingsRepository::update(), which merges into the stored option without
  * clobbering unrelated keys. Returns the merged row so the React state can
@@ -24,8 +24,8 @@ use SimpleX402\Settings\SettingsRepository;
  */
 final class SettingsAjax {
 
-	public const ACTION = 'simple_x402_save_settings';
-	public const NONCE  = 'simple_x402_save_settings_nonce';
+	public const ACTION = 'x402press_save_settings';
+	public const NONCE  = 'x402press_save_settings_nonce';
 
 	/**
 	 * Max raw `fields` JSON length, in bytes. Larger payloads are rejected

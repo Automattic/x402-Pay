@@ -2,16 +2,16 @@
 /**
  * Plugin-wide settings accessor backed by the WordPress options API.
  *
- * @package SimpleX402
+ * @package X402Press
  */
 
 declare(strict_types=1);
 
-namespace SimpleX402\Settings;
+namespace X402Press\Settings;
 
-use SimpleX402\Http\PaywallController;
-use SimpleX402\Services\FacilitatorHooks;
-use SimpleX402\Services\PriceSanitizer;
+use X402Press\Http\PaywallController;
+use X402Press\Services\FacilitatorHooks;
+use X402Press\Services\PriceSanitizer;
 
 /**
  * Thin wrapper around a single wp_options row.
@@ -30,7 +30,7 @@ use SimpleX402\Services\PriceSanitizer;
  *                               the credential pair, so swapping the picker
  *                               recalls the values last configured for that
  *                               network. The matching secret is handled by
- *                               {@see \SimpleX402\Services\ConnectorCredentialStore}
+ *                               {@see \X402Press\Services\ConnectorCredentialStore}
  *                               — it never lives in this slot.
  *   - paywall_mode:             'none' | 'category' | 'all-posts'.
  *   - paywall_audience:         'everyone' | 'bots'.
@@ -41,7 +41,7 @@ use SimpleX402\Services\PriceSanitizer;
  */
 final class SettingsRepository {
 
-	public const OPTION_NAME      = 'simple_x402_settings';
+	public const OPTION_NAME      = 'x402press_settings';
 	public const DEFAULT_PRICE    = '0.01';
 	public const DEFAULT_CATEGORY = 'x402paywall';
 
@@ -216,7 +216,7 @@ final class SettingsRepository {
 	 * clean values in another.
 	 *
 	 * For the nested `facilitators` map, slots are merged by connector ID —
-	 * submitting { simple_x402_test: {...} } leaves coinbase_cdp's slot
+	 * submitting { x402press_test: {...} } leaves coinbase_cdp's slot
 	 * untouched.
 	 *
 	 * @param array $partial Raw input (subset of the full shape).

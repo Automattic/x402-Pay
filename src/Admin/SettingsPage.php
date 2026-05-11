@@ -1,24 +1,24 @@
 <?php
 /**
- * Admin: Settings → Simple x402 page.
+ * Admin: Settings → x402press page.
  *
- * @package SimpleX402
+ * @package X402Press
  */
 
 declare(strict_types=1);
 
-namespace SimpleX402\Admin;
+namespace X402Press\Admin;
 
-use SimpleX402\Admin\SettingsAjax;
-use SimpleX402\Admin\PaywallProbeAjax;
-use SimpleX402\Admin\TestConnectionAjax;
-use SimpleX402\Connectors\ConnectorRegistry;
-use SimpleX402\Services\ConnectorCredentialStore;
-use SimpleX402\Services\FacilitatorHooks;
-use SimpleX402\Settings\SettingsRepository;
+use X402Press\Admin\SettingsAjax;
+use X402Press\Admin\PaywallProbeAjax;
+use X402Press\Admin\TestConnectionAjax;
+use X402Press\Connectors\ConnectorRegistry;
+use X402Press\Services\ConnectorCredentialStore;
+use X402Press\Services\FacilitatorHooks;
+use X402Press\Settings\SettingsRepository;
 
 /**
- * Settings → Simple x402 admin page.
+ * Settings → x402press admin page.
  *
  * Renders a mount point + JSON bootstrap; the React app in
  * assets/build/admin/index.js handles the form UI. Form submission still
@@ -27,9 +27,9 @@ use SimpleX402\Settings\SettingsRepository;
  */
 final class SettingsPage {
 
-	public const MENU_SLUG     = 'simple-x402';
-	public const GROUP         = 'simple_x402_settings_group';
-	public const SCRIPT_HANDLE = 'simple-x402-admin';
+	public const MENU_SLUG     = 'x402press';
+	public const GROUP         = 'x402press_settings_group';
+	public const SCRIPT_HANDLE = 'x402press-admin';
 
 	public function __construct(
 		private readonly SettingsRepository $settings,
@@ -53,7 +53,7 @@ final class SettingsPage {
 	public function admin_body_class( string $classes ): string {
 		$screen = function_exists( 'get_current_screen' ) ? get_current_screen() : null;
 		if ( $screen && 'settings_page_' . self::MENU_SLUG === $screen->id ) {
-			$classes .= ' simple-x402-screen';
+			$classes .= ' x402press-screen';
 		}
 		return $classes;
 	}
@@ -66,17 +66,17 @@ final class SettingsPage {
 			return;
 		}
 
-		$asset_path = SIMPLE_X402_DIR . 'assets/build/index.asset.php';
+		$asset_path = X402PRESS_DIR . 'assets/build/index.asset.php';
 		$asset      = file_exists( $asset_path )
 			? require $asset_path
 			: array(
 				'dependencies' => array(),
-				'version'      => SIMPLE_X402_VERSION,
+				'version'      => X402PRESS_VERSION,
 			);
 
 		wp_enqueue_script(
 			self::SCRIPT_HANDLE,
-			plugins_url( 'assets/build/index.js', SIMPLE_X402_FILE ),
+			plugins_url( 'assets/build/index.js', X402PRESS_FILE ),
 			$asset['dependencies'],
 			$asset['version'],
 			true
@@ -84,11 +84,11 @@ final class SettingsPage {
 
 		wp_enqueue_style( 'wp-components' );
 
-		$style_path = SIMPLE_X402_DIR . 'assets/build/style-index.css';
+		$style_path = X402PRESS_DIR . 'assets/build/style-index.css';
 		if ( file_exists( $style_path ) ) {
 			wp_enqueue_style(
 				self::SCRIPT_HANDLE,
-				plugins_url( 'assets/build/style-index.css', SIMPLE_X402_FILE ),
+				plugins_url( 'assets/build/style-index.css', X402PRESS_FILE ),
 				array( 'wp-components' ),
 				$asset['version']
 			);
@@ -96,18 +96,18 @@ final class SettingsPage {
 
 		wp_localize_script(
 			self::SCRIPT_HANDLE,
-			'simpleX402Settings',
+			'x402pressSettings',
 			$this->bootstrap_data()
 		);
 	}
 
 	/**
-	 * Add the Settings → Simple x402 menu item.
+	 * Add the Settings → x402press menu item.
 	 */
 	public function add_menu(): void {
 		add_options_page(
-			__( 'Simple x402', 'simple-x402' ),
-			__( 'Simple x402', 'simple-x402' ),
+			__( 'x402press', 'x402press' ),
+			__( 'x402press', 'x402press' ),
 			'manage_options',
 			self::MENU_SLUG,
 			array( $this, 'render' )
@@ -130,7 +130,7 @@ final class SettingsPage {
 	}
 
 	/**
-	 * Render the settings page shell. The React app paints itself into #simple-x402-app.
+	 * Render the settings page shell. The React app paints itself into #x402press-app.
 	 */
 	public function render(): void {
 		if ( ! current_user_can( 'manage_options' ) ) {
@@ -138,20 +138,20 @@ final class SettingsPage {
 		}
 		?>
 		<div class="wrap">
-			<header class="simple-x402-page__header">
-				<h1 class="simple-x402-page__header-title">
-					<?php esc_html_e( 'Simple x402', 'simple-x402' ); ?>
+			<header class="x402press-page__header">
+				<h1 class="x402press-page__header-title">
+					<?php esc_html_e( 'x402press', 'x402press' ); ?>
 				</h1>
-				<p class="simple-x402-page__header-subtitle">
+				<p class="x402press-page__header-subtitle">
 					<?php
 					esc_html_e(
 						'Configure how the x402 paywall protects your content and where payments go.',
-						'simple-x402'
+						'x402press'
 					);
 					?>
 				</p>
 			</header>
-			<div id="simple-x402-app"></div>
+			<div id="x402press-app"></div>
 		</div>
 		<?php
 	}

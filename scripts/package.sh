@@ -19,12 +19,12 @@ echo "→ composer install --no-dev (for release)"
 composer install --no-dev --optimize-autoloader --no-progress --quiet
 trap 'echo "→ restoring dev composer install"; composer install --no-progress --quiet >/dev/null' EXIT
 
-zipdest="${REPO_ROOT}/dist/simple-x402.zip"
+zipdest="${REPO_ROOT}/dist/x402press.zip"
 tmp="$(mktemp -d)"
 
-root="${tmp}/simple-x402"
+root="${tmp}/x402press"
 mkdir -p "${root}/assets"
-cp simple-x402.php "${root}/"
+cp x402press.php "${root}/"
 cp -R src "${root}/"
 # Prune dangling symlinks left over from local path-repo dev (e.g. companion
 # plugins) so `cp -RL` doesn't fail trying to follow them, then drop any
@@ -38,6 +38,6 @@ cp -R assets/build "${root}/assets/"
 [[ -f LICENSE ]]    && cp LICENSE    "${root}/"
 
 rm -f "${zipdest}"
-( cd "${tmp}" && zip -qr "${zipdest}" simple-x402 -x '*.DS_Store' )
+( cd "${tmp}" && zip -qr "${zipdest}" x402press -x '*.DS_Store' )
 rm -rf "${tmp}"
-echo "→ dist/simple-x402.zip"
+echo "→ dist/x402press.zip"

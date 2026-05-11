@@ -2,17 +2,17 @@
 /**
  * Emits an admin notice when the paywall mode flips to `all-posts`.
  *
- * @package SimpleX402
+ * @package X402Press
  */
 
 declare(strict_types=1);
 
-namespace SimpleX402\Services;
+namespace X402Press\Services;
 
-use SimpleX402\Settings\SettingsRepository;
+use X402Press\Settings\SettingsRepository;
 
 /**
- * Callback for `update_option_simple_x402_settings`. Fires the
+ * Callback for `update_option_x402press_settings`. Fires the
  * "every published post is now paywalled" notice exactly when the admin flips
  * paywall_mode from something else to `all-posts` in a single save.
  */

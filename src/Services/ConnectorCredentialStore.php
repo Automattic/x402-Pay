@@ -3,14 +3,14 @@
  * Read/write secrets for x402 facilitator connectors using the WordPress 7
  * Connectors API conventions.
  *
- * @package SimpleX402
+ * @package X402Press
  */
 
 declare(strict_types=1);
 
-namespace SimpleX402\Services;
+namespace X402Press\Services;
 
-use SimpleX402\Connectors\ConnectorRegistry;
+use X402Press\Connectors\ConnectorRegistry;
 
 /**
  * Stores facilitator API key secrets in their own wp_options row, named

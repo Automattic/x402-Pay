@@ -76,7 +76,7 @@ Apply in order; first strong match wins where noted; otherwise combine bot flag 
   - same **402** + **`PAYMENT-REQUIRED`** header;
   - **JSON** body (existing shape) vs **HTML** minimal template, chosen from **client presentation** (document navigation → HTML; otherwise JSON). **`paywall_audience`** still controls **who** is paywalled via rules; with **`everyone`**, unpaid **non-bot document** clients get the **same HTML 402** as document-style bots when `Sec-Fetch-Mode`/`Dest` indicate a document navigation.
 - [x] HTML template: post **excerpt** (from `$post_id` / queried post), site title optional, payment line with **configured price** + note to inspect x402 headers.
-- [x] Filters: `simple_x402_paywall_html_402_body` (`PaywallController::HTML_402_BODY_FILTER`), `simple_x402_paywall_excerpt_text` (`PaywallController::EXCERPT_TEXT_FILTER`).
+- [x] Filters: `x402press_paywall_html_402_body` (`PaywallController::HTML_402_BODY_FILTER`), `x402press_paywall_excerpt_text` (`PaywallController::EXCERPT_TEXT_FILTER`).
 - [x] Integration tests: `Accept` + bot UA (no document fetch metadata) → JSON body; `Sec-Fetch-Mode` navigate + document + bot UA → HTML contains excerpt; with **`everyone`**, non-bot document navigation → **HTML 402**; non-bot JSON `Accept` → JSON.
 - [x] **Admin paywall probe:** `runPaywallProbe()` accepts **402** with **`application/json`** or **`text/html`** body (JSON path still validates JSON parse).
 
@@ -84,10 +84,10 @@ Apply in order; first strong match wins where noted; otherwise combine bot flag 
 
 **Until the wpcom facilitator is live in production**, keep **audience** and **facilitator** controls so we can test on **testnet** and flip **`everyone`** for human QA.
 
-- [ ] **Audience:** keep setting in admin and in stored options; **no removal** in this phase. Optional: `simple_x402_paywall_audience` filter later if needed.
-- [ ] **Facilitator:** keep picker and **`simple_x402_test`** (x402.org / Base Sepolia) for ongoing development.
+- [ ] **Audience:** keep setting in admin and in stored options; **no removal** in this phase. Optional: `x402press_paywall_audience` filter later if needed.
+- [ ] **Facilitator:** keep picker and **`x402press_test`** (x402.org / Base Sepolia) for ongoing development.
   - **Default toward wpcom:** align UX with existing autopick where possible—**prefer `wpcom_x402`** when the companion registers it and Jetpack reports connected; otherwise fall back to test connector (already largely true—verify settings bootstrap + first-run story).
-  - **Wallet field:** hide when **`simple_x402_managed_pool_pay_to`** returns a non-empty `payTo` for the selected connector (already reflected in `managedWalletFacilitators`). If wpcom is selected **without** a managed pool address yet, the wallet may still be required for `payTo`—do **not** hide solely on connector id until `payTo` is guaranteed (e.g. dev sets `SIMPLE_X402_WPCOM_POOL_ADDRESS` or Dotcom supplies the pool).
+  - **Wallet field:** hide when **`x402press_managed_pool_pay_to`** returns a non-empty `payTo` for the selected connector (already reflected in `managedWalletFacilitators`). If wpcom is selected **without** a managed pool address yet, the wallet may still be required for `payTo`—do **not** hide solely on connector id until `payTo` is guaranteed (e.g. dev sets `X402PRESS_WPCOM_POOL_ADDRESS` or Dotcom supplies the pool).
   - Copy / help text: clarify **testnet vs WordPress.com** paths without implying the picker will disappear before wpcom ships.
 - [ ] Update **README**, **PaywallIndicator** copy, and settings payloads as needed for the above (no “single hard-coded facilitator” messaging until wpcom is ready).
 
@@ -125,8 +125,8 @@ Apply in order; first strong match wins where noted; otherwise combine bot flag 
 
 ## Changelog
 
-- **2026-04-26** — Phase B: `PaywallController` negotiates **JSON vs HTML** 402 bodies from `PaywallClientProfile` (`document_navigation_intent` → HTML excerpt template; else JSON). Filters `simple_x402_paywall_excerpt_text`, `simple_x402_paywall_html_402_body`; admin paywall probe accepts HTML 402.
-- **2026-04-26** — Phase A: `PaywallClientProfile` classifier, stable `Accept` / `Sec-Fetch-*` keys on paywall requests, `simple_x402_paywall_client_profile` filter (402 body unchanged).
-- **2026-04-26** — Phase D: unified Settings → Simple x402 **Run checks** (facilitator connectivity, then paywall probe); per-step results in admin UI.
+- **2026-04-26** — Phase B: `PaywallController` negotiates **JSON vs HTML** 402 bodies from `PaywallClientProfile` (`document_navigation_intent` → HTML excerpt template; else JSON). Filters `x402press_paywall_excerpt_text`, `x402press_paywall_html_402_body`; admin paywall probe accepts HTML 402.
+- **2026-04-26** — Phase A: `PaywallClientProfile` classifier, stable `Accept` / `Sec-Fetch-*` keys on paywall requests, `x402press_paywall_client_profile` filter (402 body unchanged).
+- **2026-04-26** — Phase D: unified Settings → x402press **Run checks** (facilitator connectivity, then paywall probe); per-step results in admin UI.
 - **2026-04-25** — Initial doc from agreed product decisions.
 - **2026-04-26** — Matrix and Phase B/C/D revisions: **`everyone`** uses same HTML 402 as document-style bots for exploration/QA; **keep audience + facilitator UI** until wpcom ships; Phase C = staging (default wpcom, hide wallet only when managed `payTo` applies); Phase B notes probe updates after HTML 402.

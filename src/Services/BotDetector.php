@@ -2,12 +2,12 @@
 /**
  * Thin wrapper around jaybizzle/crawler-detect.
  *
- * @package SimpleX402
+ * @package X402Press
  */
 
 declare(strict_types=1);
 
-namespace SimpleX402\Services;
+namespace X402Press\Services;
 
 use Jaybizzle\CrawlerDetect\CrawlerDetect;
 

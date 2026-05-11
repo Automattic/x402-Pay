@@ -1,10 +1,10 @@
 <?php
 declare(strict_types=1);
 
-namespace SimpleX402\Tests\Unit;
+namespace X402Press\Tests\Unit;
 
 use PHPUnit\Framework\TestCase;
-use SimpleX402\Plugin;
+use X402Press\Plugin;
 
 final class PluginHeadersTest extends TestCase {
 

@@ -2,12 +2,12 @@
 /**
  * Builds the x402 PaymentRequirements payload for a single request.
  *
- * @package SimpleX402
+ * @package X402Press
  */
 
 declare(strict_types=1);
 
-namespace SimpleX402\Services;
+namespace X402Press\Services;
 
 /**
  * Assembles the `PaymentRequirements` array that goes into the

@@ -2,19 +2,19 @@
 /**
  * Common surface every x402 facilitator client implements.
  *
- * @package SimpleX402
+ * @package X402Press
  */
 
 declare(strict_types=1);
 
-namespace SimpleX402\Facilitator;
+namespace X402Press\Facilitator;
 
-use SimpleX402\Services\FacilitatorProfile;
+use X402Press\Services\FacilitatorProfile;
 
 /**
  * The plugin talks to every external facilitator service through this single
  * interface, regardless of network, asset, or auth scheme. Connector authors
- * return an instance from the `simple_x402_facilitator_for_connector` filter.
+ * return an instance from the `x402press_facilitator_for_connector` filter.
  */
 interface Facilitator {
 

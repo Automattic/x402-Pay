@@ -1,4 +1,4 @@
-# Simple x402 Plugin MVP Implementation Plan
+# x402press Plugin MVP Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use `superpowers:subagent-driven-development` (recommended) or `superpowers:executing-plans` to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
@@ -7,7 +7,7 @@
 **Architecture:** On `template_redirect`, a `PaywallController` asks a filter whether the current request is paywalled. If yes, it checks a short-lived grant; otherwise it either responds with a JSON 402 containing `PAYMENT-REQUIRED` or verifies+settles an inbound `PAYMENT-SIGNATURE` against the x402.org facilitator. No human checkout UI, no custom DB tables, no Guzzle — just WordPress options, transients, `wp_remote_post`, and a handful of focused classes. Code is adapted from the existing Access402 plugin; see "Code reuse" below.
 
 **Tech Stack:**
-- PHP 8.1+, `declare(strict_types=1)`, namespaced PSR-4 (`SimpleX402\`).
+- PHP 8.1+, `declare(strict_types=1)`, namespaced PSR-4 (`X402Press\`).
 - WordPress ≥ 6.4 (settings API, transients API, taxonomies, `wp_remote_post`).
 - PHPUnit 10 (pure-PHP unit tests with a thin WP stub bootstrap; **no** wp-mock, **no** wp-phpunit).
 - PHP_CodeSniffer with the WordPress-Extra standard.
@@ -44,7 +44,7 @@
  *     'description' => string,   // optional, shown in payment requirements
  * ]
  */
-apply_filters('simple_x402_rule_for_request', null, $ctx);
+apply_filters('x402press_rule_for_request', null, $ctx);
 ```
 
 The plugin registers one default callback at priority 10 that returns a rule iff the current post has the `paywall` tag or `paywall` category.
@@ -56,8 +56,8 @@ The plugin registers one default callback at priority 10 that returns a rule iff
 ## File Structure
 
 ```
-simple-x402/
-├── simple-x402.php                      # plugin header, boot
+x402press/
+├── x402press.php                      # plugin header, boot
 ├── composer.json
 ├── phpunit.xml.dist
 ├── phpcs.xml.dist
@@ -97,7 +97,7 @@ One responsibility per file. `Plugin` is the only place that news up objects and
 ## Task 1: Repository scaffold
 
 **Files:**
-- Create: `simple-x402.php`
+- Create: `x402press.php`
 - Create: `composer.json`
 - Create: `phpunit.xml.dist`
 - Create: `phpcs.xml.dist`
@@ -105,39 +105,39 @@ One responsibility per file. `Plugin` is the only place that news up objects and
 - Create: `README.md`
 - Create: `.gitignore`
 
-- [ ] **Step 1: Create `simple-x402.php`**
+- [ ] **Step 1: Create `x402press.php`**
 
 ```php
 <?php
 /**
- * Plugin Name:       Simple x402
+ * Plugin Name:       x402press
  * Description:       Minimal x402 paywall for bots and API clients. Uses x402.org on Base Sepolia.
  * Version:           0.1.0
  * Requires at least: 6.4
  * Requires PHP:      8.1
  * License:           GPL-2.0-or-later
- * Text Domain:       simple-x402
+ * Text Domain:       x402press
  */
 
 declare(strict_types=1);
 
 defined('ABSPATH') || exit;
 
-define('SIMPLE_X402_VERSION', '0.1.0');
-define('SIMPLE_X402_FILE', __FILE__);
-define('SIMPLE_X402_DIR', plugin_dir_path(__FILE__));
+define('X402PRESS_VERSION', '0.1.0');
+define('X402PRESS_FILE', __FILE__);
+define('X402PRESS_DIR', plugin_dir_path(__FILE__));
 
 require_once __DIR__ . '/vendor/autoload.php';
 
-add_action('plugins_loaded', [\SimpleX402\Plugin::class, 'boot']);
-register_activation_hook(__FILE__, [\SimpleX402\Plugin::class, 'activate']);
+add_action('plugins_loaded', [\X402Press\Plugin::class, 'boot']);
+register_activation_hook(__FILE__, [\X402Press\Plugin::class, 'activate']);
 ```
 
 - [ ] **Step 2: Create `composer.json`**
 
 ```json
 {
-  "name": "automattic/simple-x402",
+  "name": "automattic/x402press",
   "description": "Minimal x402 paywall for WordPress.",
   "type": "wordpress-plugin",
   "license": "GPL-2.0-or-later",
@@ -152,10 +152,10 @@ register_activation_hook(__FILE__, [\SimpleX402\Plugin::class, 'activate']);
     "dealerdirect/phpcodesniffer-composer-installer": "^1.0"
   },
   "autoload": {
-    "psr-4": { "SimpleX402\\": "src/" }
+    "psr-4": { "X402Press\\": "src/" }
   },
   "autoload-dev": {
-    "psr-4": { "SimpleX402\\Tests\\": "tests/" }
+    "psr-4": { "X402Press\\Tests\\": "tests/" }
   },
   "config": {
     "allow-plugins": {
@@ -200,9 +200,9 @@ register_activation_hook(__FILE__, [\SimpleX402\Plugin::class, 'activate']);
 
 ```xml
 <?xml version="1.0"?>
-<ruleset name="simple-x402">
-    <description>Coding standards for the Simple x402 plugin.</description>
-    <file>simple-x402.php</file>
+<ruleset name="x402press">
+    <description>Coding standards for the x402press plugin.</description>
+    <file>x402press.php</file>
     <file>src</file>
     <arg name="extensions" value="php"/>
     <arg name="colors"/>
@@ -213,7 +213,7 @@ register_activation_hook(__FILE__, [\SimpleX402\Plugin::class, 'activate']);
     <config name="minimum_supported_wp_version" value="6.4"/>
     <rule ref="WordPress.WP.I18n">
         <properties>
-            <property name="text_domain" type="array" value="simple-x402"/>
+            <property name="text_domain" type="array" value="x402press"/>
         </properties>
     </rule>
 </ruleset>
@@ -251,16 +251,16 @@ if (!function_exists('trailingslashit')) {
 }
 
 // Reset global state between tests.
-$GLOBALS['__sx402_options']    = [];
-$GLOBALS['__sx402_transients'] = [];
-$GLOBALS['__sx402_filters']    = [];
-$GLOBALS['__sx402_http']       = null;
+$GLOBALS['__x402press_options']    = [];
+$GLOBALS['__x402press_transients'] = [];
+$GLOBALS['__x402press_filters']    = [];
+$GLOBALS['__x402press_http']       = null;
 ```
 
 - [ ] **Step 6: Create `README.md`**
 
 ```markdown
-# Simple x402
+# x402press
 
 Minimal WordPress plugin that gates selected posts behind an x402 payment using the public x402.org facilitator on Base Sepolia.
 
@@ -285,12 +285,12 @@ composer lint
 ## What it does
 
 - Adds a `Paywall` tag and category on activation.
-- Adds a Settings → Simple x402 page with two fields: wallet address, default price.
+- Adds a Settings → x402press page with two fields: wallet address, default price.
 - On any frontend request for a paywalled post, responds HTTP 402 with a `PAYMENT-REQUIRED` header and a JSON body, unless the request carries a valid `PAYMENT-SIGNATURE` (verified+settled via x402.org) or a live grant.
 
 ## Extending
 
-See the `simple_x402_rule_for_request` filter in `src/Services/RuleResolver.php`.
+See the `x402press_rule_for_request` filter in `src/Services/RuleResolver.php`.
 ```
 
 - [ ] **Step 7: Create `.gitignore`**
@@ -334,10 +334,10 @@ git commit -m "chore: scaffold plugin, composer, phpunit and phpcs configs"
 <?php
 declare(strict_types=1);
 
-namespace SimpleX402\Tests\Unit;
+namespace X402Press\Tests\Unit;
 
 use PHPUnit\Framework\TestCase;
-use SimpleX402\Services\X402HeaderCodec;
+use X402Press\Services\X402HeaderCodec;
 
 final class X402HeaderCodecTest extends TestCase
 {
@@ -368,18 +368,18 @@ final class X402HeaderCodecTest extends TestCase
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `vendor/bin/phpunit --filter X402HeaderCodecTest`
-Expected: FAIL with "Class SimpleX402\Services\X402HeaderCodec not found".
+Expected: FAIL with "Class X402Press\Services\X402HeaderCodec not found".
 
 - [ ] **Step 3: Write implementation**
 
-Open `/Users/alex/dev/Access402/src/Services/X402HeaderCodec.php` and copy its `encode` and `decode` methods into a new file under `SimpleX402\Services`. The implementation is small enough to inline here:
+Open `/Users/alex/dev/Access402/src/Services/X402HeaderCodec.php` and copy its `encode` and `decode` methods into a new file under `X402Press\Services`. The implementation is small enough to inline here:
 
 `src/Services/X402HeaderCodec.php`:
 ```php
 <?php
 declare(strict_types=1);
 
-namespace SimpleX402\Services;
+namespace X402Press\Services;
 
 final class X402HeaderCodec
 {
@@ -445,13 +445,13 @@ Append to `tests/bootstrap.php`:
 if (!function_exists('get_option')) {
     function get_option(string $name, $default = false)
     {
-        return $GLOBALS['__sx402_options'][$name] ?? $default;
+        return $GLOBALS['__x402press_options'][$name] ?? $default;
     }
 }
 if (!function_exists('update_option')) {
     function update_option(string $name, $value, $autoload = null): bool
     {
-        $GLOBALS['__sx402_options'][$name] = $value;
+        $GLOBALS['__x402press_options'][$name] = $value;
         return true;
     }
 }
@@ -464,16 +464,16 @@ if (!function_exists('update_option')) {
 <?php
 declare(strict_types=1);
 
-namespace SimpleX402\Tests\Unit;
+namespace X402Press\Tests\Unit;
 
 use PHPUnit\Framework\TestCase;
-use SimpleX402\Settings\SettingsRepository;
+use X402Press\Settings\SettingsRepository;
 
 final class SettingsRepositoryTest extends TestCase
 {
     protected function setUp(): void
     {
-        $GLOBALS['__sx402_options'] = [];
+        $GLOBALS['__x402press_options'] = [];
     }
 
     public function test_defaults_when_nothing_stored(): void
@@ -503,7 +503,7 @@ final class SettingsRepositoryTest extends TestCase
 - [ ] **Step 3: Run test to verify it fails**
 
 Run: `vendor/bin/phpunit --filter SettingsRepositoryTest`
-Expected: FAIL with "Class SimpleX402\Settings\SettingsRepository not found".
+Expected: FAIL with "Class X402Press\Settings\SettingsRepository not found".
 
 - [ ] **Step 4: Implement**
 
@@ -512,11 +512,11 @@ Expected: FAIL with "Class SimpleX402\Settings\SettingsRepository not found".
 <?php
 declare(strict_types=1);
 
-namespace SimpleX402\Settings;
+namespace X402Press\Settings;
 
 final class SettingsRepository
 {
-    public const OPTION_NAME   = 'simple_x402_settings';
+    public const OPTION_NAME   = 'x402press_settings';
     public const DEFAULT_PRICE = '0.01';
 
     public function wallet_address(): string
@@ -579,10 +579,10 @@ Builds the x402 `PaymentRequirements` array that goes in the `PAYMENT-REQUIRED` 
 <?php
 declare(strict_types=1);
 
-namespace SimpleX402\Tests\Unit;
+namespace X402Press\Tests\Unit;
 
 use PHPUnit\Framework\TestCase;
-use SimpleX402\Services\PaymentRequirementsBuilder;
+use X402Press\Services\PaymentRequirementsBuilder;
 
 final class PaymentRequirementsBuilderTest extends TestCase
 {
@@ -632,7 +632,7 @@ Expected: FAIL.
 <?php
 declare(strict_types=1);
 
-namespace SimpleX402\Services;
+namespace X402Press\Services;
 
 final class PaymentRequirementsBuilder
 {
@@ -712,8 +712,8 @@ if (!function_exists('is_wp_error')) {
 if (!function_exists('wp_remote_post')) {
     function wp_remote_post(string $url, array $args = [])
     {
-        $GLOBALS['__sx402_http'] = ['url' => $url, 'args' => $args];
-        $next = $GLOBALS['__sx402_http_next'] ?? null;
+        $GLOBALS['__x402press_http'] = ['url' => $url, 'args' => $args];
+        $next = $GLOBALS['__x402press_http_next'] ?? null;
         if ($next instanceof \WP_Error) { return $next; }
         return $next ?? ['response' => ['code' => 200], 'body' => '{}'];
     }
@@ -739,53 +739,53 @@ if (!function_exists('wp_remote_retrieve_body')) {
 <?php
 declare(strict_types=1);
 
-namespace SimpleX402\Tests\Unit;
+namespace X402Press\Tests\Unit;
 
 use PHPUnit\Framework\TestCase;
-use SimpleX402\Services\X402FacilitatorClient;
+use X402Press\Services\X402FacilitatorClient;
 
 final class X402FacilitatorClientTest extends TestCase
 {
     protected function setUp(): void
     {
-        $GLOBALS['__sx402_http']      = null;
-        $GLOBALS['__sx402_http_next'] = null;
+        $GLOBALS['__x402press_http']      = null;
+        $GLOBALS['__x402press_http_next'] = null;
     }
 
     public function test_verify_posts_to_x402_org_verify(): void
     {
-        $GLOBALS['__sx402_http_next'] = [
+        $GLOBALS['__x402press_http_next'] = [
             'response' => ['code' => 200],
             'body'     => '{"isValid":true}',
         ];
         $client = new X402FacilitatorClient();
         $result = $client->verify(['scheme' => 'exact'], ['signature' => 'x']);
 
-        $this->assertSame('https://x402.org/facilitator/verify', $GLOBALS['__sx402_http']['url']);
+        $this->assertSame('https://x402.org/facilitator/verify', $GLOBALS['__x402press_http']['url']);
         $this->assertTrue($result['isValid']);
         $this->assertSame(
             json_encode(['paymentRequirements' => ['scheme' => 'exact'], 'paymentPayload' => ['signature' => 'x']]),
-            $GLOBALS['__sx402_http']['args']['body']
+            $GLOBALS['__x402press_http']['args']['body']
         );
     }
 
     public function test_settle_posts_to_x402_org_settle(): void
     {
-        $GLOBALS['__sx402_http_next'] = [
+        $GLOBALS['__x402press_http_next'] = [
             'response' => ['code' => 200],
             'body'     => '{"success":true,"transaction":"0xabc"}',
         ];
         $client = new X402FacilitatorClient();
         $result = $client->settle(['scheme' => 'exact'], ['signature' => 'x']);
 
-        $this->assertSame('https://x402.org/facilitator/settle', $GLOBALS['__sx402_http']['url']);
+        $this->assertSame('https://x402.org/facilitator/settle', $GLOBALS['__x402press_http']['url']);
         $this->assertTrue($result['success']);
         $this->assertSame('0xabc', $result['transaction']);
     }
 
     public function test_wp_error_becomes_failure(): void
     {
-        $GLOBALS['__sx402_http_next'] = new \WP_Error('http_fail', 'boom');
+        $GLOBALS['__x402press_http_next'] = new \WP_Error('http_fail', 'boom');
         $client = new X402FacilitatorClient();
         $result = $client->verify([], []);
         $this->assertFalse($result['isValid']);
@@ -794,7 +794,7 @@ final class X402FacilitatorClientTest extends TestCase
 
     public function test_non_2xx_becomes_failure(): void
     {
-        $GLOBALS['__sx402_http_next'] = [
+        $GLOBALS['__x402press_http_next'] = [
             'response' => ['code' => 500],
             'body'     => '{"error":"bad"}',
         ];
@@ -818,7 +818,7 @@ Expected: FAIL.
 <?php
 declare(strict_types=1);
 
-namespace SimpleX402\Services;
+namespace X402Press\Services;
 
 final class X402FacilitatorClient
 {
@@ -912,7 +912,7 @@ Append:
 if (!function_exists('apply_filters')) {
     function apply_filters(string $hook, $value, ...$args)
     {
-        foreach ($GLOBALS['__sx402_filters'][$hook] ?? [] as $cb) {
+        foreach ($GLOBALS['__x402press_filters'][$hook] ?? [] as $cb) {
             $value = $cb($value, ...$args);
         }
         return $value;
@@ -921,7 +921,7 @@ if (!function_exists('apply_filters')) {
 if (!function_exists('add_filter')) {
     function add_filter(string $hook, callable $cb, int $priority = 10, int $accepted_args = 1): bool
     {
-        $GLOBALS['__sx402_filters'][$hook][] = $cb;
+        $GLOBALS['__x402press_filters'][$hook][] = $cb;
         return true;
     }
 }
@@ -934,16 +934,16 @@ if (!function_exists('add_filter')) {
 <?php
 declare(strict_types=1);
 
-namespace SimpleX402\Tests\Unit;
+namespace X402Press\Tests\Unit;
 
 use PHPUnit\Framework\TestCase;
-use SimpleX402\Services\RuleResolver;
+use X402Press\Services\RuleResolver;
 
 final class RuleResolverTest extends TestCase
 {
     protected function setUp(): void
     {
-        $GLOBALS['__sx402_filters'] = [];
+        $GLOBALS['__x402press_filters'] = [];
     }
 
     public function test_returns_null_when_no_filter_matches(): void
@@ -954,7 +954,7 @@ final class RuleResolverTest extends TestCase
 
     public function test_returns_rule_from_filter_with_defaults_applied(): void
     {
-        add_filter('simple_x402_rule_for_request', static fn () => ['price' => '0.25'], 10, 2);
+        add_filter('x402press_rule_for_request', static fn () => ['price' => '0.25'], 10, 2);
         $resolver = new RuleResolver();
         $rule = $resolver->resolve(['path' => '/x', 'method' => 'GET', 'post_id' => 0]);
 
@@ -965,7 +965,7 @@ final class RuleResolverTest extends TestCase
 
     public function test_rejects_rule_with_invalid_price(): void
     {
-        add_filter('simple_x402_rule_for_request', static fn () => ['price' => 'free'], 10, 2);
+        add_filter('x402press_rule_for_request', static fn () => ['price' => 'free'], 10, 2);
         $resolver = new RuleResolver();
         $this->assertNull($resolver->resolve(['path' => '/x', 'method' => 'GET', 'post_id' => 0]));
     }
@@ -979,11 +979,11 @@ final class RuleResolverTest extends TestCase
 <?php
 declare(strict_types=1);
 
-namespace SimpleX402\Services;
+namespace X402Press\Services;
 
 final class RuleResolver
 {
-    public const HOOK        = 'simple_x402_rule_for_request';
+    public const HOOK        = 'x402press_rule_for_request';
     public const DEFAULT_TTL = 86400;
 
     public function resolve(array $ctx): ?array
@@ -1021,7 +1021,7 @@ Expected: PASS (3 tests).
 
 ```bash
 git add src/Services/RuleResolver.php tests/Unit/RuleResolverTest.php tests/bootstrap.php
-git commit -m "feat: add RuleResolver wrapping simple_x402_rule_for_request filter"
+git commit -m "feat: add RuleResolver wrapping x402press_rule_for_request filter"
 ```
 
 ### 6b. `DefaultPaywallRule`
@@ -1033,10 +1033,10 @@ Append:
 if (!function_exists('has_term')) {
     function has_term(string $term, string $taxonomy, int $post_id): bool
     {
-        return in_array([$term, $taxonomy, $post_id], $GLOBALS['__sx402_terms'] ?? [], true);
+        return in_array([$term, $taxonomy, $post_id], $GLOBALS['__x402press_terms'] ?? [], true);
     }
 }
-$GLOBALS['__sx402_terms'] = [];
+$GLOBALS['__x402press_terms'] = [];
 ```
 
 - [ ] **Step 2: Write the failing test**
@@ -1046,18 +1046,18 @@ $GLOBALS['__sx402_terms'] = [];
 <?php
 declare(strict_types=1);
 
-namespace SimpleX402\Tests\Unit;
+namespace X402Press\Tests\Unit;
 
 use PHPUnit\Framework\TestCase;
-use SimpleX402\Services\DefaultPaywallRule;
-use SimpleX402\Settings\SettingsRepository;
+use X402Press\Services\DefaultPaywallRule;
+use X402Press\Settings\SettingsRepository;
 
 final class DefaultPaywallRuleTest extends TestCase
 {
     protected function setUp(): void
     {
-        $GLOBALS['__sx402_terms']   = [];
-        $GLOBALS['__sx402_options'] = [];
+        $GLOBALS['__x402press_terms']   = [];
+        $GLOBALS['__x402press_options'] = [];
     }
 
     public function test_returns_null_when_no_post_id(): void
@@ -1068,7 +1068,7 @@ final class DefaultPaywallRuleTest extends TestCase
 
     public function test_returns_rule_when_post_has_paywall_tag(): void
     {
-        $GLOBALS['__sx402_terms'] = [['paywall', 'post_tag', 42]];
+        $GLOBALS['__x402press_terms'] = [['paywall', 'post_tag', 42]];
         $rule = new DefaultPaywallRule(new SettingsRepository());
         $this->assertSame(
             ['price' => '0.01', 'ttl' => 86400],
@@ -1078,14 +1078,14 @@ final class DefaultPaywallRuleTest extends TestCase
 
     public function test_returns_rule_when_post_has_paywall_category(): void
     {
-        $GLOBALS['__sx402_terms'] = [['paywall', 'category', 7]];
+        $GLOBALS['__x402press_terms'] = [['paywall', 'category', 7]];
         $rule = new DefaultPaywallRule(new SettingsRepository());
         $this->assertNotNull($rule->__invoke(null, ['post_id' => 7]));
     }
 
     public function test_preserves_rule_from_higher_priority_filter(): void
     {
-        $GLOBALS['__sx402_terms'] = [['paywall', 'post_tag', 42]];
+        $GLOBALS['__x402press_terms'] = [['paywall', 'post_tag', 42]];
         $rule = new DefaultPaywallRule(new SettingsRepository());
         $preset = ['price' => '9.99', 'ttl' => 10];
         $this->assertSame($preset, $rule->__invoke($preset, ['post_id' => 42]));
@@ -1100,9 +1100,9 @@ final class DefaultPaywallRuleTest extends TestCase
 <?php
 declare(strict_types=1);
 
-namespace SimpleX402\Services;
+namespace X402Press\Services;
 
-use SimpleX402\Settings\SettingsRepository;
+use X402Press\Settings\SettingsRepository;
 
 final class DefaultPaywallRule
 {
@@ -1157,10 +1157,10 @@ Append:
 if (!function_exists('get_transient')) {
     function get_transient(string $key)
     {
-        $entry = $GLOBALS['__sx402_transients'][$key] ?? null;
+        $entry = $GLOBALS['__x402press_transients'][$key] ?? null;
         if ($entry === null) { return false; }
         if ($entry['expires'] > 0 && $entry['expires'] < time()) {
-            unset($GLOBALS['__sx402_transients'][$key]);
+            unset($GLOBALS['__x402press_transients'][$key]);
             return false;
         }
         return $entry['value'];
@@ -1169,7 +1169,7 @@ if (!function_exists('get_transient')) {
 if (!function_exists('set_transient')) {
     function set_transient(string $key, $value, int $ttl = 0): bool
     {
-        $GLOBALS['__sx402_transients'][$key] = [
+        $GLOBALS['__x402press_transients'][$key] = [
             'value'   => $value,
             'expires' => $ttl > 0 ? time() + $ttl : 0,
         ];
@@ -1185,16 +1185,16 @@ if (!function_exists('set_transient')) {
 <?php
 declare(strict_types=1);
 
-namespace SimpleX402\Tests\Unit;
+namespace X402Press\Tests\Unit;
 
 use PHPUnit\Framework\TestCase;
-use SimpleX402\Services\GrantStore;
+use X402Press\Services\GrantStore;
 
 final class GrantStoreTest extends TestCase
 {
     protected function setUp(): void
     {
-        $GLOBALS['__sx402_transients'] = [];
+        $GLOBALS['__x402press_transients'] = [];
     }
 
     public function test_has_grant_false_by_default(): void
@@ -1233,11 +1233,11 @@ final class GrantStoreTest extends TestCase
 <?php
 declare(strict_types=1);
 
-namespace SimpleX402\Services;
+namespace X402Press\Services;
 
 final class GrantStore
 {
-    private const PREFIX = 'sx402_grant_';
+    private const PREFIX = 'x402press_grant_';
 
     public function has_grant(string $wallet, string $path): bool
     {
@@ -1304,13 +1304,13 @@ if (!function_exists('home_url')) {
 if (!function_exists('status_header')) {
     function status_header(int $code): void
     {
-        $GLOBALS['__sx402_response']['status'] = $code;
+        $GLOBALS['__x402press_response']['status'] = $code;
     }
 }
 if (!function_exists('nocache_headers')) {
     function nocache_headers(): void {}
 }
-$GLOBALS['__sx402_response'] = ['status' => 200, 'headers' => [], 'body' => null, 'exited' => false];
+$GLOBALS['__x402press_response'] = ['status' => 200, 'headers' => [], 'body' => null, 'exited' => false];
 ```
 
 - [ ] **Step 2: Write the failing integration test**
@@ -1320,30 +1320,30 @@ $GLOBALS['__sx402_response'] = ['status' => 200, 'headers' => [], 'body' => null
 <?php
 declare(strict_types=1);
 
-namespace SimpleX402\Tests\Integration;
+namespace X402Press\Tests\Integration;
 
 use PHPUnit\Framework\TestCase;
-use SimpleX402\Http\PaywallController;
-use SimpleX402\Services\GrantStore;
-use SimpleX402\Services\PaymentRequirementsBuilder;
-use SimpleX402\Services\RuleResolver;
-use SimpleX402\Services\X402FacilitatorClient;
-use SimpleX402\Services\X402HeaderCodec;
-use SimpleX402\Settings\SettingsRepository;
+use X402Press\Http\PaywallController;
+use X402Press\Services\GrantStore;
+use X402Press\Services\PaymentRequirementsBuilder;
+use X402Press\Services\RuleResolver;
+use X402Press\Services\X402FacilitatorClient;
+use X402Press\Services\X402HeaderCodec;
+use X402Press\Settings\SettingsRepository;
 
 final class PaywallControllerTest extends TestCase
 {
     protected function setUp(): void
     {
-        $GLOBALS['__sx402_filters']    = [];
-        $GLOBALS['__sx402_transients'] = [];
-        $GLOBALS['__sx402_options']    = ['simple_x402_settings' => [
+        $GLOBALS['__x402press_filters']    = [];
+        $GLOBALS['__x402press_transients'] = [];
+        $GLOBALS['__x402press_options']    = ['x402press_settings' => [
             'wallet_address' => '0xreceiver',
             'default_price'  => '0.01',
         ]];
-        $GLOBALS['__sx402_response']   = ['status' => 200, 'headers' => [], 'body' => null, 'exited' => false];
-        $GLOBALS['__sx402_http']       = null;
-        $GLOBALS['__sx402_http_next']  = null;
+        $GLOBALS['__x402press_response']   = ['status' => 200, 'headers' => [], 'body' => null, 'exited' => false];
+        $GLOBALS['__x402press_http']       = null;
+        $GLOBALS['__x402press_http_next']  = null;
     }
 
     private function controller(): PaywallController
@@ -1365,13 +1365,13 @@ final class PaywallControllerTest extends TestCase
             'post_id' => 0,
             'headers' => [],
         ]);
-        $this->assertSame(200, $GLOBALS['__sx402_response']['status']);
-        $this->assertFalse($GLOBALS['__sx402_response']['exited']);
+        $this->assertSame(200, $GLOBALS['__x402press_response']['status']);
+        $this->assertFalse($GLOBALS['__x402press_response']['exited']);
     }
 
     public function test_responds_402_when_rule_matches_and_no_signature(): void
     {
-        add_filter('simple_x402_rule_for_request', static fn () => ['price' => '0.01'], 10, 2);
+        add_filter('x402press_rule_for_request', static fn () => ['price' => '0.01'], 10, 2);
 
         $this->controller()->handle([
             'path'    => '/foo',
@@ -1380,17 +1380,17 @@ final class PaywallControllerTest extends TestCase
             'headers' => [],
         ]);
 
-        $this->assertSame(402, $GLOBALS['__sx402_response']['status']);
-        $this->assertArrayHasKey('PAYMENT-REQUIRED', $GLOBALS['__sx402_response']['headers']);
-        $decoded = X402HeaderCodec::decode($GLOBALS['__sx402_response']['headers']['PAYMENT-REQUIRED']);
+        $this->assertSame(402, $GLOBALS['__x402press_response']['status']);
+        $this->assertArrayHasKey('PAYMENT-REQUIRED', $GLOBALS['__x402press_response']['headers']);
+        $decoded = X402HeaderCodec::decode($GLOBALS['__x402press_response']['headers']['PAYMENT-REQUIRED']);
         $this->assertSame('0xreceiver', $decoded['payTo']);
         $this->assertSame('10000', $decoded['maxAmountRequired']);
-        $this->assertTrue($GLOBALS['__sx402_response']['exited']);
+        $this->assertTrue($GLOBALS['__x402press_response']['exited']);
     }
 
     public function test_allows_request_with_live_grant(): void
     {
-        add_filter('simple_x402_rule_for_request', static fn () => ['price' => '0.01'], 10, 2);
+        add_filter('x402press_rule_for_request', static fn () => ['price' => '0.01'], 10, 2);
         (new GrantStore())->issue('0xbuyer', '/foo', 60, []);
 
         $this->controller()->handle([
@@ -1400,13 +1400,13 @@ final class PaywallControllerTest extends TestCase
             'headers' => ['X-Wallet-Address' => '0xbuyer'],
         ]);
 
-        $this->assertSame(200, $GLOBALS['__sx402_response']['status']);
-        $this->assertFalse($GLOBALS['__sx402_response']['exited']);
+        $this->assertSame(200, $GLOBALS['__x402press_response']['status']);
+        $this->assertFalse($GLOBALS['__x402press_response']['exited']);
     }
 
     public function test_verifies_and_settles_then_issues_grant(): void
     {
-        add_filter('simple_x402_rule_for_request', static fn () => ['price' => '0.01'], 10, 2);
+        add_filter('x402press_rule_for_request', static fn () => ['price' => '0.01'], 10, 2);
 
         $payload = X402HeaderCodec::encode([
             'scheme'  => 'exact',
@@ -1414,7 +1414,7 @@ final class PaywallControllerTest extends TestCase
         ]);
 
         // Two sequential HTTP calls: verify, then settle.
-        $GLOBALS['__sx402_http_queue'] = [
+        $GLOBALS['__x402press_http_queue'] = [
             ['response' => ['code' => 200], 'body' => '{"isValid":true}'],
             ['response' => ['code' => 200], 'body' => '{"success":true,"transaction":"0xdead"}'],
         ];
@@ -1426,7 +1426,7 @@ final class PaywallControllerTest extends TestCase
             'headers' => ['PAYMENT-SIGNATURE' => $payload],
         ]);
 
-        $this->assertSame(200, $GLOBALS['__sx402_response']['status']);
+        $this->assertSame(200, $GLOBALS['__x402press_response']['status']);
         $this->assertTrue((new GrantStore())->has_grant('0xbuyer', '/foo'));
     }
 }
@@ -1438,11 +1438,11 @@ The queue-based HTTP stub needs a small extension. Update the `wp_remote_post` s
 if (!function_exists('wp_remote_post')) {
     function wp_remote_post(string $url, array $args = [])
     {
-        $GLOBALS['__sx402_http'] = ['url' => $url, 'args' => $args];
-        if (!empty($GLOBALS['__sx402_http_queue'])) {
-            return array_shift($GLOBALS['__sx402_http_queue']);
+        $GLOBALS['__x402press_http'] = ['url' => $url, 'args' => $args];
+        if (!empty($GLOBALS['__x402press_http_queue'])) {
+            return array_shift($GLOBALS['__x402press_http_queue']);
         }
-        $next = $GLOBALS['__sx402_http_next'] ?? null;
+        $next = $GLOBALS['__x402press_http_next'] ?? null;
         if ($next instanceof \WP_Error) { return $next; }
         return $next ?? ['response' => ['code' => 200], 'body' => '{}'];
     }
@@ -1462,14 +1462,14 @@ Expected: FAIL (controller does not exist).
 <?php
 declare(strict_types=1);
 
-namespace SimpleX402\Http;
+namespace X402Press\Http;
 
-use SimpleX402\Services\GrantStore;
-use SimpleX402\Services\PaymentRequirementsBuilder;
-use SimpleX402\Services\RuleResolver;
-use SimpleX402\Services\X402FacilitatorClient;
-use SimpleX402\Services\X402HeaderCodec;
-use SimpleX402\Settings\SettingsRepository;
+use X402Press\Services\GrantStore;
+use X402Press\Services\PaymentRequirementsBuilder;
+use X402Press\Services\RuleResolver;
+use X402Press\Services\X402FacilitatorClient;
+use X402Press\Services\X402HeaderCodec;
+use X402Press\Settings\SettingsRepository;
 
 final class PaywallController
 {
@@ -1543,10 +1543,10 @@ final class PaywallController
     {
         nocache_headers();
         status_header(402);
-        $GLOBALS['__sx402_response']['headers']['Content-Type']     = 'application/json';
-        $GLOBALS['__sx402_response']['headers']['PAYMENT-REQUIRED'] = X402HeaderCodec::encode($requirements);
-        $GLOBALS['__sx402_response']['body']                        = wp_json_encode(['requirements' => $requirements] + $body);
-        $GLOBALS['__sx402_response']['exited']                      = true;
+        $GLOBALS['__x402press_response']['headers']['Content-Type']     = 'application/json';
+        $GLOBALS['__x402press_response']['headers']['PAYMENT-REQUIRED'] = X402HeaderCodec::encode($requirements);
+        $GLOBALS['__x402press_response']['body']                        = wp_json_encode(['requirements' => $requirements] + $body);
+        $GLOBALS['__x402press_response']['exited']                      = true;
     }
 
     private function extract_wallet(array $payload): string
@@ -1560,7 +1560,7 @@ final class PaywallController
 }
 ```
 
-Note: in production, `respond_402` will `echo $body` and `exit`. For tests we capture to `$GLOBALS['__sx402_response']`. We will wrap the echo/exit at the hook-wiring site (Task 8b) so the controller stays testable.
+Note: in production, `respond_402` will `echo $body` and `exit`. For tests we capture to `$GLOBALS['__x402press_response']`. We will wrap the echo/exit at the hook-wiring site (Task 8b) so the controller stays testable.
 
 - [ ] **Step 5: Run integration tests**
 
@@ -1582,15 +1582,15 @@ git commit -m "feat: PaywallController orchestrates 402 / verify / settle / gran
 <?php
 declare(strict_types=1);
 
-namespace SimpleX402;
+namespace X402Press;
 
-use SimpleX402\Http\PaywallController;
-use SimpleX402\Services\DefaultPaywallRule;
-use SimpleX402\Services\GrantStore;
-use SimpleX402\Services\PaymentRequirementsBuilder;
-use SimpleX402\Services\RuleResolver;
-use SimpleX402\Services\X402FacilitatorClient;
-use SimpleX402\Settings\SettingsRepository;
+use X402Press\Http\PaywallController;
+use X402Press\Services\DefaultPaywallRule;
+use X402Press\Services\GrantStore;
+use X402Press\Services\PaymentRequirementsBuilder;
+use X402Press\Services\RuleResolver;
+use X402Press\Services\X402FacilitatorClient;
+use X402Press\Settings\SettingsRepository;
 
 final class Plugin
 {
@@ -1613,8 +1613,8 @@ final class Plugin
             $path    = (string) (wp_parse_url(home_url(add_query_arg([])), PHP_URL_PATH) ?? '/');
             $headers = self::collect_headers();
             $echo    = function (): void {
-                if (!empty($GLOBALS['__sx402_response']['exited'])) {
-                    echo (string) $GLOBALS['__sx402_response']['body'];
+                if (!empty($GLOBALS['__x402press_response']['exited'])) {
+                    echo (string) $GLOBALS['__x402press_response']['body'];
                     exit;
                 }
             };
@@ -1660,7 +1660,7 @@ Expected: no errors.
 - [ ] **Step 3: Commit**
 
 ```bash
-git add src/Plugin.php simple-x402.php
+git add src/Plugin.php x402press.php
 git commit -m "feat: wire Plugin bootstrap to template_redirect"
 ```
 
@@ -1671,7 +1671,7 @@ git commit -m "feat: wire Plugin bootstrap to template_redirect"
 **Files:**
 - Create: `src/Admin/SettingsPage.php`
 
-Register a minimal options page under Settings → Simple x402 with two fields. No tests — this is glue around `register_setting` / `settings_fields` that buys nothing from unit testing. Manual verification is the acceptance gate.
+Register a minimal options page under Settings → x402press with two fields. No tests — this is glue around `register_setting` / `settings_fields` that buys nothing from unit testing. Manual verification is the acceptance gate.
 
 - [ ] **Step 1: Implement**
 
@@ -1680,14 +1680,14 @@ Register a minimal options page under Settings → Simple x402 with two fields. 
 <?php
 declare(strict_types=1);
 
-namespace SimpleX402\Admin;
+namespace X402Press\Admin;
 
-use SimpleX402\Settings\SettingsRepository;
+use X402Press\Settings\SettingsRepository;
 
 final class SettingsPage
 {
-    public const MENU_SLUG = 'simple-x402';
-    public const GROUP     = 'simple_x402_settings_group';
+    public const MENU_SLUG = 'x402press';
+    public const GROUP     = 'x402press_settings_group';
 
     public function __construct(private readonly SettingsRepository $settings) {}
 
@@ -1700,8 +1700,8 @@ final class SettingsPage
     public function add_menu(): void
     {
         add_options_page(
-            __('Simple x402', 'simple-x402'),
-            __('Simple x402', 'simple-x402'),
+            __('x402press', 'x402press'),
+            __('x402press', 'x402press'),
             'manage_options',
             self::MENU_SLUG,
             [$this, 'render']
@@ -1731,25 +1731,25 @@ final class SettingsPage
         $option = esc_attr(SettingsRepository::OPTION_NAME);
         ?>
         <div class="wrap">
-            <h1><?php esc_html_e('Simple x402', 'simple-x402'); ?></h1>
+            <h1><?php esc_html_e('x402press', 'x402press'); ?></h1>
             <form method="post" action="options.php">
                 <?php settings_fields(self::GROUP); ?>
                 <table class="form-table" role="presentation">
                     <tr>
                         <th scope="row">
-                            <label for="sx402-wallet"><?php esc_html_e('Receiving wallet address', 'simple-x402'); ?></label>
+                            <label for="x402press-wallet"><?php esc_html_e('Receiving wallet address', 'x402press'); ?></label>
                         </th>
                         <td>
-                            <input name="<?php echo $option; ?>[wallet_address]" id="sx402-wallet" type="text" class="regular-text" value="<?php echo $wallet; ?>"/>
-                            <p class="description"><?php esc_html_e('Base Sepolia address that receives USDC.', 'simple-x402'); ?></p>
+                            <input name="<?php echo $option; ?>[wallet_address]" id="x402press-wallet" type="text" class="regular-text" value="<?php echo $wallet; ?>"/>
+                            <p class="description"><?php esc_html_e('Base Sepolia address that receives USDC.', 'x402press'); ?></p>
                         </td>
                     </tr>
                     <tr>
                         <th scope="row">
-                            <label for="sx402-price"><?php esc_html_e('Default price (USDC)', 'simple-x402'); ?></label>
+                            <label for="x402press-price"><?php esc_html_e('Default price (USDC)', 'x402press'); ?></label>
                         </th>
                         <td>
-                            <input name="<?php echo $option; ?>[default_price]" id="sx402-price" type="text" class="small-text" value="<?php echo $price; ?>"/>
+                            <input name="<?php echo $option; ?>[default_price]" id="x402press-price" type="text" class="small-text" value="<?php echo $price; ?>"/>
                         </td>
                     </tr>
                 </table>
@@ -1767,7 +1767,7 @@ In `src/Plugin.php`, inside `boot()`, after the `$default_rule` line, add:
 
 ```php
 if (is_admin()) {
-    (new \SimpleX402\Admin\SettingsPage($settings))->register();
+    (new \X402Press\Admin\SettingsPage($settings))->register();
 }
 ```
 
@@ -1775,7 +1775,7 @@ if (is_admin()) {
 
 1. Install the plugin into a local WordPress.
 2. Activate it.
-3. Navigate to Settings → Simple x402.
+3. Navigate to Settings → x402press.
 4. Enter a wallet address and a price, save.
 5. Reload and confirm values persist.
 
@@ -1874,7 +1874,7 @@ git commit -m "docs: changelog entry for 0.1.0"
 
 ## Execution Handoff
 
-Plan complete and saved to `docs/plans/2026-04-20-simple-x402-mvp.md`. Two execution options:
+Plan complete and saved to `docs/plans/2026-04-20-x402press-mvp.md`. Two execution options:
 
 1. **Subagent-Driven (recommended)** — fresh subagent per task, review between tasks, fast iteration.
 2. **Inline Execution** — execute tasks in this session with checkpoints for review.

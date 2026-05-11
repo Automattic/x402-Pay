@@ -2,17 +2,17 @@
 /**
  * Default rule: paywall posts based on the configured audience and mode.
  *
- * @package SimpleX402
+ * @package X402Press
  */
 
 declare(strict_types=1);
 
-namespace SimpleX402\Services;
+namespace X402Press\Services;
 
-use SimpleX402\Settings\SettingsRepository;
+use X402Press\Settings\SettingsRepository;
 
 /**
- * Callback for the `simple_x402_rule_for_request` filter at priority 10.
+ * Callback for the `x402press_rule_for_request` filter at priority 10.
  *
  * Respects an earlier filter's answer if one is already set; otherwise returns
  * a paywall rule based on two settings:
