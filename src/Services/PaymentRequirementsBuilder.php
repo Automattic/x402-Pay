@@ -10,8 +10,8 @@ declare(strict_types=1);
 namespace X402Press\Services;
 
 /**
- * Assembles the `PaymentRequirements` array that goes into the
- * PAYMENT-REQUIRED response header and JSON body.
+ * Assembles the `PaymentRequirements` array embedded in the spec-standard
+ * 402 JSON envelope (`{ x402Version, error, accepts: [<PaymentRequirements>] }`).
  *
  * Network, asset, and EIP-712 domain come from the injected FacilitatorProfile,
  * so the builder itself is agnostic to test vs live.
