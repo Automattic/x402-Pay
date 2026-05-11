@@ -189,13 +189,13 @@ final class PaywallController {
 
 		$signature_header = (string) ( $request['headers']['Payment-Signature'] ?? '' );
 		if ( '' === $signature_header ) {
-			$this->respond_402( $request, $requirements, $rule['price'], array( 'error' => 'payment_required' ) );
+			$this->respond_402( $request, $requirements, $rule, array( 'error' => 'payment_required' ) );
 			return;
 		}
 
 		$payload = X402HeaderCodec::decode( $signature_header );
 		if ( null === $payload ) {
-			$this->respond_402( $request, $requirements, $rule['price'], array( 'error' => 'invalid_signature_header' ) );
+			$this->respond_402( $request, $requirements, $rule, array( 'error' => 'invalid_signature_header' ) );
 			return;
 		}
 
@@ -204,7 +204,7 @@ final class PaywallController {
 			$this->respond_402(
 				$request,
 				$requirements,
-				$rule['price'],
+				$rule,
 				array(
 					'error'  => 'verify_failed',
 					'reason' => $verify['error'],
@@ -218,7 +218,7 @@ final class PaywallController {
 			$this->respond_402(
 				$request,
 				$requirements,
-				$rule['price'],
+				$rule,
 				array(
 					'error'  => 'settle_failed',
 					'reason' => $settle['error'],
@@ -258,18 +258,20 @@ final class PaywallController {
 	/**
 	 * Emit a 402 response via the response buffer (JSON or HTML body per client profile).
 	 *
-	 * @param array  $request      Paywall request (uses post_id for HTML excerpt).
-	 * @param string $price        Decimal USDC amount (e.g. "0.01") for clients that expect a human-readable price alongside `requirements.maxAmountRequired`.
-	 * @param array  $body         Extra keys (e.g. error); must not use keys `requirements` or `price`.
+	 * @param array $request      Paywall request (uses post_id for HTML excerpt).
+	 * @param array $requirements Encoded x402 requirements.
+	 * @param array $rule         Resolved rule with at least `price` (decimal USDC) and `ttl` (grant lifetime, seconds).
+	 * @param array $body         Extra keys (e.g. error); must not use keys `requirements` or `price`.
 	 */
-	private function respond_402( array $request, array $requirements, string $price, array $body ): void {
+	private function respond_402( array $request, array $requirements, array $rule, array $body ): void {
 		nocache_headers();
 		status_header( 402 );
 		$GLOBALS['__sx402_response']['headers']['PAYMENT-REQUIRED'] = X402HeaderCodec::encode( $requirements );
 
+		$price = (string) ( $rule['price'] ?? '' );
 		if ( $this->should_serve_html_402_body() ) {
 			$GLOBALS['__sx402_response']['headers']['Content-Type'] = 'text/html; charset=UTF-8';
-			$GLOBALS['__sx402_response']['body']                    = $this->build_html_402_body( $request, $requirements, $price, $body );
+			$GLOBALS['__sx402_response']['body']                    = $this->build_html_402_body( $request, $requirements, $rule, $body );
 		} else {
 			$GLOBALS['__sx402_response']['headers']['Content-Type'] = 'application/json';
 			// Use array union (+), not array_merge: keys in $body must not overwrite requirements/price.
@@ -296,9 +298,12 @@ final class PaywallController {
 	}
 
 	/**
+	 * @param array<string,mixed> $rule Resolved rule (price + ttl).
 	 * @param array<string,mixed> $body
 	 */
-	private function build_html_402_body( array $request, array $requirements, string $price, array $body ): string {
+	private function build_html_402_body( array $request, array $requirements, array $rule, array $body ): string {
+		$price   = (string) ( $rule['price'] ?? '' );
+		$ttl     = (int) ( $rule['ttl'] ?? 0 );
 		$post_id = (int) ( $request['post_id'] ?? 0 );
 		$excerpt = (string) apply_filters(
 			self::EXCERPT_TEXT_FILTER,
@@ -307,16 +312,24 @@ final class PaywallController {
 			$request
 		);
 
-		$site = function_exists( 'get_bloginfo' ) ? (string) get_bloginfo( 'name' ) : '';
-		$site = '' !== $site ? '<p class="sx402-site">' . esc_html( $site ) . '</p>' : '';
+		$site_name      = function_exists( 'get_bloginfo' ) ? (string) get_bloginfo( 'name' ) : '';
+		$site_icon_url  = function_exists( 'get_site_icon_url' ) ? (string) get_site_icon_url( 96 ) : '';
+		$site_block     = $this->build_site_block( $site_name, $site_icon_url );
 
-		$excerpt_block = '' !== $excerpt
+		$post_title     = $this->paywall_post_title( $post_id );
+		$title_block    = '' !== $post_title
+			? '<h2 class="sx402-title">' . esc_html( $post_title ) . '</h2>'
+			: '';
+		$excerpt_block  = '' !== $excerpt
 			? '<p class="sx402-excerpt">' . esc_html( $excerpt ) . '</p>'
 			: '';
 
-		$error_code = isset( $body['error'] ) ? (string) $body['error'] : '';
-		$error_line = '' !== $error_code
-			? '<p class="sx402-error"><code>' . esc_html( $error_code ) . '</code></p>'
+		$error_code    = isset( $body['error'] ) ? (string) $body['error'] : '';
+		$error_message = $this->error_message_for_visitor( $error_code );
+		$error_line    = '' !== $error_message
+			? '<p class="sx402-error" data-sx402-error="' . esc_attr( $error_code ) . '">'
+				. esc_html( $error_message )
+				. '</p>'
 			: '';
 
 		$providers_block = $this->payment_providers_block( $request, $requirements );
@@ -326,27 +339,155 @@ final class PaywallController {
 				. esc_html__( 'x402 payment instructions are in the PAYMENT-REQUIRED HTTP response header.', 'simple-x402' )
 				. '</p>';
 
-		$html = '<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><title>'
+		$price_block = '<div class="sx402-price-card">'
+			. '<span class="sx402-price-label">'
+			. esc_html( $this->access_duration_label( $ttl ) )
+			. '</span>'
+			. '<span class="sx402-price-amount">'
+			. esc_html(
+				/* translators: %s: USDC price (decimal string). */
+				sprintf( __( '%s USDC', 'simple-x402' ), $price )
+			)
+			. '</span>'
+			. '</div>';
+
+		$html = '<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8">'
+			. '<meta name="viewport" content="width=device-width, initial-scale=1">'
+			. '<meta name="robots" content="noindex">'
+			. '<title>'
 			. esc_html__( 'Payment required', 'simple-x402' )
 			. '</title>'
 			. $this->html_402_styles()
-			. '</head><body><main><h1>'
+			. '</head><body><main class="sx402-card">'
+			. $site_block
+			. '<div class="sx402-headline">'
+			. '<p class="sx402-eyebrow">'
 			. esc_html__( 'Payment required', 'simple-x402' )
-			. '</h1>'
-			. $site
-			. $excerpt_block
-			. '<p class="sx402-price">'
-			. esc_html(
-				/* translators: %s: USDC price (decimal string). */
-				sprintf( __( 'Price: %s USDC', 'simple-x402' ), $price )
-			)
 			. '</p>'
+			. $title_block
+			. $excerpt_block
+			. '</div>'
+			. $price_block
 			. $providers_block
 			. $hint_line
 			. $error_line
 			. '</main></body></html>';
 
 		return (string) apply_filters( self::HTML_402_BODY_FILTER, $html, $request, $requirements, $price, $body );
+	}
+
+	/**
+	 * Site identity block at the top of the 402 page — the favicon (if the
+	 * admin set a Site Icon in Customizer → Site Identity) plus the site
+	 * name, both linking back to the home page so a paywalled visitor has
+	 * an obvious way out.
+	 */
+	private function build_site_block( string $name, string $icon_url ): string {
+		if ( '' === $name && '' === $icon_url ) {
+			return '';
+		}
+		$home = function_exists( 'home_url' ) ? (string) home_url( '/' ) : '';
+		$icon = '' !== $icon_url
+			? '<img class="sx402-site-icon" src="' . esc_url( $icon_url ) . '" alt="" width="20" height="20">'
+			: '';
+		$name_html = '' !== $name
+			? '<span class="sx402-site-name">' . esc_html( $name ) . '</span>'
+			: '';
+		$inner = $icon . $name_html;
+		if ( '' !== $home ) {
+			return '<a class="sx402-site" href="' . esc_url( $home ) . '">' . $inner . '</a>';
+		}
+		return '<div class="sx402-site">' . $inner . '</div>';
+	}
+
+	/**
+	 * Human-readable copy for each 402 error_code, or '' to render no error
+	 * line at all. The bare initial 402 (`payment_required`) deliberately
+	 * returns an empty string — the eyebrow + price card already convey
+	 * the state, and rendering "payment_required" looks like an error to
+	 * a visitor who hasn't tried to pay yet.
+	 *
+	 * The raw `error_code` is still exposed via a `data-sx402-error`
+	 * attribute on the rendered element so devtools / extensions can read
+	 * it without us cluttering the visible UI.
+	 */
+	private function error_message_for_visitor( string $error_code ): string {
+		switch ( $error_code ) {
+			case '':
+			case 'payment_required':
+				// Initial 402 — not an error from the visitor's perspective.
+				return '';
+			case 'invalid_signature_header':
+				return __(
+					'The payment data sent by your wallet was invalid. Try again.',
+					'simple-x402'
+				);
+			case 'verify_failed':
+				return __(
+					'Your payment couldn’t be verified. Check your wallet and try again.',
+					'simple-x402'
+				);
+			case 'settle_failed':
+				return __(
+					'Your payment couldn’t be settled on-chain. Try again in a moment.',
+					'simple-x402'
+				);
+			default:
+				return __( 'Something went wrong with the payment. Try again.', 'simple-x402' );
+		}
+	}
+
+	/**
+	 * Human-readable description of how long a successful payment grants
+	 * access to the same path. Honest about the fact that the grant is a
+	 * time-bound transient — not "one-time access" — and rounds to whatever
+	 * unit reads naturally for the rule's TTL.
+	 *
+	 * Falls back to the generic "Access" label if the rule didn't carry a
+	 * positive TTL (which would mean the grant won't actually be issued —
+	 * see {@see GrantStore::issue()}).
+	 */
+	private function access_duration_label( int $ttl_seconds ): string {
+		if ( $ttl_seconds <= 0 ) {
+			return __( 'Access', 'simple-x402' );
+		}
+		if ( $ttl_seconds < HOUR_IN_SECONDS ) {
+			$minutes = max( 1, (int) round( $ttl_seconds / MINUTE_IN_SECONDS ) );
+			return sprintf(
+				/* translators: %d: number of minutes the grant is valid for. */
+				_n( 'Access for %d minute', 'Access for %d minutes', $minutes, 'simple-x402' ),
+				$minutes
+			);
+		}
+		if ( $ttl_seconds < DAY_IN_SECONDS ) {
+			$hours = max( 1, (int) round( $ttl_seconds / HOUR_IN_SECONDS ) );
+			return sprintf(
+				/* translators: %d: number of hours the grant is valid for. */
+				_n( 'Access for %d hour', 'Access for %d hours', $hours, 'simple-x402' ),
+				$hours
+			);
+		}
+		$days = max( 1, (int) round( $ttl_seconds / DAY_IN_SECONDS ) );
+		return sprintf(
+			/* translators: %d: number of days the grant is valid for. */
+			_n( 'Access for %d day', 'Access for %d days', $days, 'simple-x402' ),
+			$days
+		);
+	}
+
+	/**
+	 * Fetch the post title for the paywall request, or '' when no post is
+	 * matched (e.g. archive pages or routes without a queried object).
+	 */
+	private function paywall_post_title( int $post_id ): string {
+		if ( $post_id <= 0 || ! function_exists( 'get_post' ) ) {
+			return '';
+		}
+		$post = get_post( $post_id );
+		if ( ! is_object( $post ) || ! isset( $post->post_title ) ) {
+			return '';
+		}
+		return trim( (string) $post->post_title );
 	}
 
 	/**
@@ -406,12 +547,10 @@ final class PaywallController {
 			return '';
 		}
 
-		$status   = esc_html__( 'Choose a payment method to continue.', 'simple-x402' );
 		$host_url = plugins_url( 'src/Payment/loader.js', SIMPLE_X402_FILE );
 
 		return '<div class="sx402-checkout">'
 			. '<div class="sx402-providers">' . $slots . '</div>'
-			. '<p id="sx402-status" class="sx402-status">' . $status . '</p>'
 			. '<script type="application/json" id="sx402-payment-context">' . $context_json . '</script>'
 			. '<script defer src="' . esc_url( $host_url ) . '"></script>'
 			. $script_tags
@@ -419,20 +558,225 @@ final class PaywallController {
 	}
 
 	private function html_402_styles(): string {
+		// Muted, deliberately quiet palette. Greyscale only — site-icon
+		// colour is the one visual focal point so the paywall page never
+		// fights with the host site's branding.
 		return <<<'CSS'
 <style>
-	body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif; max-width: 540px; margin: 4rem auto; padding: 0 1rem; color: #1d1d1f; }
-	h1 { font-size: 22px; }
-	.sx402-site { color: #6e6e73; margin: 4px 0 16px; font-size: 14px; }
-	.sx402-excerpt { color: #444; margin: 12px 0 20px; }
-	.sx402-price { font-size: 15px; margin: 16px 0; }
-	.sx402-checkout { margin: 20px 0; }
-	.sx402-providers { display: flex; flex-direction: column; gap: 8px; }
-	.sx402-pay-button { font: inherit; font-size: 15px; padding: 10px 20px; border: 0; background: linear-gradient(135deg, #ff8a4c 0%, #ff5c3a 100%); color: white; border-radius: 8px; cursor: pointer; }
-	.sx402-pay-button:disabled { opacity: 0.6; cursor: not-allowed; }
-	.sx402-status { color: #6e6e73; font-size: 13px; margin: 10px 0 0; }
-	.sx402-hint, .sx402-error { color: #6e6e73; font-size: 13px; }
-	.sx402-error code { background: #fef2f2; padding: 2px 6px; border-radius: 4px; }
+	:root {
+		--sx402-bg: #f5f5f4;
+		--sx402-surface: #ffffff;
+		--sx402-border: #e7e5e4;
+		--sx402-text: #1c1917;
+		--sx402-text-muted: #57534e;
+		--sx402-text-faint: #a8a29e;
+		--sx402-primary: #1c1917;
+		--sx402-primary-text: #fafaf9;
+	}
+	* { box-sizing: border-box; }
+	html, body { margin: 0; padding: 0; }
+	body {
+		font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+		font-size: 15px;
+		line-height: 1.55;
+		color: var(--sx402-text);
+		background: var(--sx402-bg);
+		min-height: 100vh;
+		display: flex;
+		justify-content: center;
+		padding: 48px 16px;
+	}
+	.sx402-card {
+		width: 100%;
+		max-width: 440px;
+		background: var(--sx402-surface);
+		border: 1px solid var(--sx402-border);
+		border-radius: 12px;
+		padding: 28px 28px 24px;
+		box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+	}
+	.sx402-site {
+		display: inline-flex;
+		align-items: center;
+		gap: 8px;
+		font-size: 13px;
+		font-weight: 500;
+		color: var(--sx402-text-muted);
+		text-decoration: none;
+		margin-bottom: 24px;
+	}
+	a.sx402-site:hover { color: var(--sx402-text); }
+	.sx402-site-icon {
+		width: 20px;
+		height: 20px;
+		border-radius: 4px;
+		display: block;
+	}
+	.sx402-headline { margin: 0 0 20px; }
+	.sx402-eyebrow {
+		font-size: 11px;
+		font-weight: 600;
+		letter-spacing: 0.06em;
+		text-transform: uppercase;
+		color: var(--sx402-text-faint);
+		margin: 0 0 8px;
+	}
+	.sx402-title {
+		font-size: 22px;
+		line-height: 1.3;
+		font-weight: 600;
+		margin: 0 0 12px;
+		color: var(--sx402-text);
+	}
+	.sx402-excerpt {
+		color: var(--sx402-text-muted);
+		margin: 0;
+		display: -webkit-box;
+		-webkit-line-clamp: 3;
+		-webkit-box-orient: vertical;
+		overflow: hidden;
+	}
+	.sx402-price-card {
+		display: flex;
+		align-items: baseline;
+		justify-content: space-between;
+		padding: 14px 16px;
+		border: 1px solid var(--sx402-border);
+		border-radius: 8px;
+		margin-bottom: 16px;
+		background: var(--sx402-bg);
+	}
+	.sx402-price-label {
+		font-size: 13px;
+		color: var(--sx402-text-muted);
+	}
+	.sx402-price-amount {
+		font-size: 16px;
+		font-weight: 600;
+		color: var(--sx402-text);
+		font-variant-numeric: tabular-nums;
+	}
+	.sx402-checkout { margin: 0; }
+	.sx402-providers {
+		display: flex;
+		flex-direction: column;
+		gap: 8px;
+	}
+	/* Each provider slot can render multiple children (e.g. the EVM-wallet
+	   slot stacks detected wallets + a "or get a wallet" divider + install
+	   links). Reproduce the parent gap so spacing stays consistent
+	   regardless of slot child count. */
+	.sx402-providers > div {
+		display: flex;
+		flex-direction: column;
+		gap: 8px;
+	}
+	/* Social-login-style list row: each wallet/provider is one button with
+	   its icon at the left and its name to the right. Equal weight across
+	   providers — no "primary" CTA so detected EIP-6963 wallets and the
+	   built-in providers all read the same. */
+	.sx402-pay-button {
+		display: flex;
+		align-items: center;
+		gap: 12px;
+		width: 100%;
+		font: inherit;
+		font-size: 14px;
+		font-weight: 500;
+		padding: 12px 14px;
+		border: 1px solid var(--sx402-border);
+		border-radius: 8px;
+		background: var(--sx402-surface);
+		color: var(--sx402-text);
+		text-align: left;
+		cursor: pointer;
+		transition: border-color 0.15s ease, background 0.15s ease;
+	}
+	.sx402-pay-button:hover {
+		border-color: var(--sx402-text-faint);
+		background: var(--sx402-bg);
+	}
+	.sx402-pay-button:active { background: var(--sx402-border); }
+	.sx402-pay-button:disabled { opacity: 0.5; cursor: not-allowed; }
+	.sx402-pay-icon {
+		display: inline-flex;
+		flex-shrink: 0;
+		width: 24px;
+		height: 24px;
+	}
+	.sx402-pay-icon svg, .sx402-pay-icon img {
+		width: 100%;
+		height: 100%;
+		display: block;
+		border-radius: 6px;
+	}
+	.sx402-pay-label { flex: 1; }
+	/* Trailing meta slot — currently only used by the install-link variant
+	   to render an "external link" arrow, but free for any provider that
+	   wants a small trailing affordance (e.g. "scan QR" badge). */
+	.sx402-pay-meta {
+		flex-shrink: 0;
+		color: var(--sx402-text-faint);
+		font-size: 13px;
+	}
+	/* Install-link variant — outbound link, not a payment action. Visually
+	   secondary: tighter padding, smaller font, muted label colour. Icon
+	   is the wallet's real official SVG (bundled with the plugin), not a
+	   placeholder. text-decoration reset keeps anchor styles from leaking
+	   through. */
+	.sx402-pay-button--install {
+		padding: 10px 14px;
+		font-size: 13px;
+		text-decoration: none;
+	}
+	.sx402-pay-button--install .sx402-pay-label {
+		color: var(--sx402-text-muted);
+	}
+	.sx402-pay-button--install .sx402-pay-icon {
+		width: 20px;
+		height: 20px;
+	}
+	/* Section divider rendered above the install links — only appears when
+	   the EvmWallet provider has at least one suggested wallet that wasn't
+	   announced via EIP-6963. The flanking lines are pseudo-elements so
+	   the label sits centred. */
+	.sx402-section-divider {
+		display: flex;
+		align-items: center;
+		gap: 12px;
+		color: var(--sx402-text-faint);
+		font-size: 12px;
+		text-transform: uppercase;
+		letter-spacing: 0.06em;
+		margin: 4px 0;
+	}
+	.sx402-section-divider::before,
+	.sx402-section-divider::after {
+		content: '';
+		flex: 1;
+		height: 1px;
+		background: var(--sx402-border);
+	}
+	.sx402-status {
+		color: var(--sx402-text-muted);
+		font-size: 13px;
+		margin: 12px 0 0;
+		text-align: center;
+	}
+	.sx402-hint {
+		color: var(--sx402-text-muted);
+		font-size: 12px;
+		margin: 16px 0 0;
+	}
+	.sx402-error {
+		color: var(--sx402-text);
+		font-size: 13px;
+		margin: 16px 0 0;
+		padding: 12px 14px;
+		border: 1px solid var(--sx402-border);
+		border-radius: 8px;
+		background: var(--sx402-bg);
+	}
 </style>
 CSS;
 	}

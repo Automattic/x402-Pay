@@ -699,6 +699,159 @@ final class PaywallControllerTest extends TestCase {
 		$this->assertStringContainsString( 'Everyone mode excerpt.', (string) $GLOBALS['__sx402_response']['body'] );
 	}
 
+	public function test_html_402_renders_site_identity_and_post_title(): void {
+		add_filter( 'simple_x402_rule_for_request', static fn () => array( 'price' => '0.01' ), 10, 2 );
+		$GLOBALS['__sx402_bloginfo']['name'] = 'Example Site';
+		$GLOBALS['__sx402_site_icon_url']    = 'https://example.test/icon-96.png';
+		$GLOBALS['__sx402_posts'][55]        = array(
+			'post_type'    => 'post',
+			'post_status'  => 'publish',
+			'post_title'   => 'The Headline of the Story',
+			'post_excerpt' => 'A teaser sentence to whet the appetite.',
+		);
+		$human_ua = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36';
+
+		$this->controller()->handle(
+			array(
+				'path'    => '/p/55',
+				'method'  => 'GET',
+				'post_id' => 55,
+				'headers' => array(
+					'User-Agent'     => $human_ua,
+					'Accept'         => 'text/html',
+					'Sec-Fetch-Mode' => 'navigate',
+					'Sec-Fetch-Dest' => 'document',
+				),
+			)
+		);
+
+		$html = (string) $GLOBALS['__sx402_response']['body'];
+		// Site identity row at the top: clickable wrapper with the site
+		// name and the configured Site Icon as the favicon-style avatar.
+		$this->assertStringContainsString( 'class="sx402-site"', $html );
+		$this->assertStringContainsString( 'Example Site', $html );
+		$this->assertStringContainsString( 'src="https://example.test/icon-96.png"', $html );
+		// Post title rendered as the headline (replaces the generic
+		// "Payment required" h1 from the old layout).
+		$this->assertStringContainsString( '<h2 class="sx402-title">The Headline of the Story</h2>', $html );
+		// Excerpt block remains.
+		$this->assertStringContainsString( 'A teaser sentence to whet the appetite.', $html );
+		// Price now rendered as a labelled card, not a bare line.
+		$this->assertStringContainsString( 'class="sx402-price-card"', $html );
+		$this->assertStringContainsString( '0.01 USDC', $html );
+	}
+
+	public function test_html_402_price_card_label_uses_rule_ttl(): void {
+		// Two-hour TTL → "Access for 2 hours" (the previous "One-time access"
+		// label was misleading: payment grants TTL-bound transient access,
+		// not single-shot access).
+		add_filter(
+			'simple_x402_rule_for_request',
+			static fn () => array( 'price' => '0.01', 'ttl' => 7200 ),
+			10,
+			2
+		);
+		$human_ua = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36';
+
+		$this->controller()->handle(
+			array(
+				'path'    => '/post',
+				'method'  => 'GET',
+				'post_id' => 0,
+				'headers' => array(
+					'User-Agent'     => $human_ua,
+					'Accept'         => 'text/html',
+					'Sec-Fetch-Mode' => 'navigate',
+					'Sec-Fetch-Dest' => 'document',
+				),
+			)
+		);
+
+		$html = (string) $GLOBALS['__sx402_response']['body'];
+		$this->assertStringContainsString( 'Access for 2 hours', $html );
+		$this->assertStringNotContainsString( 'One-time access', $html );
+	}
+
+	public function test_initial_402_does_not_render_payment_required_as_an_error(): void {
+		// Bare first visit (no PAYMENT-SIGNATURE) is the expected state, not
+		// a failure — the eyebrow + price card already say so. Rendering
+		// "payment_required" as an error block was misleading dev noise.
+		add_filter( 'simple_x402_rule_for_request', static fn () => array( 'price' => '0.01' ), 10, 2 );
+		$human_ua = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36';
+
+		$this->controller()->handle(
+			array(
+				'path'    => '/post',
+				'method'  => 'GET',
+				'post_id' => 0,
+				'headers' => array(
+					'User-Agent'     => $human_ua,
+					'Accept'         => 'text/html',
+					'Sec-Fetch-Mode' => 'navigate',
+					'Sec-Fetch-Dest' => 'document',
+				),
+			)
+		);
+
+		$html = (string) $GLOBALS['__sx402_response']['body'];
+		$this->assertStringNotContainsString( 'class="sx402-error"', $html );
+		$this->assertStringNotContainsString( 'payment_required', $html );
+	}
+
+	public function test_invalid_signature_header_renders_friendly_error_with_dev_data_attr(): void {
+		add_filter( 'simple_x402_rule_for_request', static fn () => array( 'price' => '0.01' ), 10, 2 );
+		$human_ua = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36';
+
+		$this->controller()->handle(
+			array(
+				'path'    => '/post',
+				'method'  => 'GET',
+				'post_id' => 0,
+				'headers' => array(
+					'User-Agent'        => $human_ua,
+					'Accept'            => 'text/html',
+					'Sec-Fetch-Mode'    => 'navigate',
+					'Sec-Fetch-Dest'    => 'document',
+					'Payment-Signature' => 'this-is-not-base64-x402-data',
+				),
+			)
+		);
+
+		$html = (string) $GLOBALS['__sx402_response']['body'];
+		// The user gets prose, not a stack trace.
+		$this->assertStringContainsString( 'class="sx402-error"', $html );
+		$this->assertStringContainsString( 'payment data sent by your wallet was invalid', $html );
+		// The raw code is still on the element so devtools / extensions /
+		// log scrapers can read it without us showing it to humans.
+		$this->assertStringContainsString( 'data-sx402-error="invalid_signature_header"', $html );
+	}
+
+	public function test_html_402_omits_site_block_when_no_name_or_icon(): void {
+		add_filter( 'simple_x402_rule_for_request', static fn () => array( 'price' => '0.01' ), 10, 2 );
+		$GLOBALS['__sx402_bloginfo']['name'] = '';
+		$GLOBALS['__sx402_site_icon_url']    = '';
+		$human_ua = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36';
+
+		$this->controller()->handle(
+			array(
+				'path'    => '/anywhere',
+				'method'  => 'GET',
+				'post_id' => 0,
+				'headers' => array(
+					'User-Agent'     => $human_ua,
+					'Accept'         => 'text/html',
+					'Sec-Fetch-Mode' => 'navigate',
+					'Sec-Fetch-Dest' => 'document',
+				),
+			)
+		);
+
+		$html = (string) $GLOBALS['__sx402_response']['body'];
+		// Empty site name + missing icon → no identity row at all, rather
+		// than an empty placeholder.
+		$this->assertStringNotContainsString( 'class="sx402-site"', $html );
+	}
+
 	public function test_everyone_audience_human_json_accept_serves_json_402(): void {
 		$GLOBALS['__sx402_options']['simple_x402_settings']['paywall_audience'] = SettingsRepository::AUDIENCE_EVERYONE;
 		add_filter( 'simple_x402_rule_for_request', static fn () => array( 'price' => '0.01' ), 10, 2 );

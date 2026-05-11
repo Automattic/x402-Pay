@@ -20,6 +20,7 @@ use SimpleX402\Connectors\TestConnectorRegistrar;
 use SimpleX402\Facilitator\FacilitatorResolver;
 use SimpleX402\Services\FacilitatorHooks;
 use SimpleX402\Http\PaywallController;
+use SimpleX402\Payment\Providers\EvmWallet\Provider as EvmWalletProvider;
 use SimpleX402\Payment\Providers\GravatarWallet\Provider as GravatarWalletProvider;
 use SimpleX402\Services\AllPostsModeNoticeEmitter;
 use SimpleX402\Services\BotDetector;
@@ -71,6 +72,7 @@ final class Plugin {
 		add_filter( RuleResolver::HOOK, $default_rule, 10, 2 );
 
 		GravatarWalletProvider::register();
+		EvmWalletProvider::register();
 
 		$indicator->register();
 
