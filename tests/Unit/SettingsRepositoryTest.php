@@ -98,6 +98,18 @@ final class SettingsRepositoryTest extends TestCase {
 		$this->assertSame( '0.01', $repo->default_price() );
 	}
 
+	public function test_sanitize_rejects_scientific_notation_price_to_default(): void {
+		$repo = new SettingsRepository();
+		$repo->save( array( 'default_price' => '1e3' ) );
+		$this->assertSame( '0.01', $repo->default_price() );
+	}
+
+	public function test_sanitize_rejects_over_precise_price_to_default(): void {
+		$repo = new SettingsRepository();
+		$repo->save( array( 'default_price' => '0.1234567' ) );
+		$this->assertSame( '0.01', $repo->default_price() );
+	}
+
 	public function test_sanitize_strips_invalid_chars_from_facilitator_id(): void {
 		$repo = new SettingsRepository();
 		$repo->save( array( 'selected_facilitator_id' => 'Simple/X402 Test!' ) );

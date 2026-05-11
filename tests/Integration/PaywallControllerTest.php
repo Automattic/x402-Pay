@@ -473,6 +473,46 @@ final class PaywallControllerTest extends TestCase {
 		$this->assertTrue( ( new GrantStore() )->redeem( $token, '/foo' ) );
 	}
 
+	public function test_grant_cookie_path_encodes_attribute_separators(): void {
+		add_filter( 'simple_x402_rule_for_request', static fn () => array( 'price' => '0.01', 'ttl' => 600 ), 10, 2 );
+
+		$payload = X402HeaderCodec::encode(
+			array(
+				'scheme'  => 'exact',
+				'payload' => array( 'authorization' => array( 'from' => '0xbuyer' ) ),
+			)
+		);
+
+		$GLOBALS['__sx402_http_queue'] = array(
+			array(
+				'response' => array( 'code' => 200 ),
+				'body'     => '{"isValid":true}',
+			),
+			array(
+				'response' => array( 'code' => 200 ),
+				'body'     => '{"success":true,"transaction":"0xdead"}',
+			),
+		);
+
+		$this->controller()->handle(
+			array(
+				'path'    => '/foo; Domain=example.test',
+				'method'  => 'GET',
+				'post_id' => 0,
+				'headers' => array( 'Payment-Signature' => $payload ),
+			)
+		);
+
+		$cookie_line = self::find_header_line(
+			$GLOBALS['__sx402_response']['success_headers'],
+			'Set-Cookie: ' . PaywallController::GRANT_COOKIE . '='
+		);
+
+		$this->assertNotNull( $cookie_line );
+		$this->assertStringContainsString( 'Path=/foo%3B%20Domain=example.test', $cookie_line );
+		$this->assertStringNotContainsString( '; Domain=example.test', $cookie_line );
+	}
+
 	/**
 	 * @param list<string> $lines
 	 */

@@ -178,4 +178,36 @@ final class SettingsAjaxTest extends TestCase {
 			array_keys( $data['connectorCredentials'] ?? array() )
 		);
 	}
+
+	public function test_connector_secret_null_clears_stored_api_key(): void {
+		$GLOBALS['__sx402_connectors'] = array(
+			'cdp_connector' => array(
+				'type'           => ConnectorRegistry::FACILITATOR_TYPE,
+				'authentication' => array( 'method' => 'api_key' ),
+			),
+		);
+
+		$store = new ConnectorCredentialStore();
+		$store->set_secret( 'cdp_connector', 'old-secret' );
+
+		$_POST['action'] = SettingsAjax::ACTION;
+		$_POST['nonce']  = 'x';
+		$_POST['fields'] = wp_json_encode(
+			array(
+				'connector_secrets' => array(
+					'cdp_connector' => null,
+				),
+			)
+		);
+
+		( new SettingsAjax( new SettingsRepository() ) )->handle();
+
+		$this->assertSame( '', $store->secret( 'cdp_connector' ) );
+		$data = $GLOBALS['__sx402_json_success'];
+		$this->assertSame(
+			array( 'cdp_connector' ),
+			array_keys( $data['connectorCredentials'] ?? array() )
+		);
+		$this->assertFalse( $data['connectorCredentials']['cdp_connector']['has_secret'] );
+	}
 }

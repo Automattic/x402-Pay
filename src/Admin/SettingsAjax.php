@@ -84,7 +84,7 @@ final class SettingsAjax {
 		}
 		$accepted_secret_ids = array();
 		foreach ( $secrets as $connector_id => $value ) {
-			if ( ! is_string( $connector_id ) || ! is_string( $value ) ) {
+			if ( ! is_string( $connector_id ) || ( ! is_string( $value ) && null !== $value ) ) {
 				continue;
 			}
 			// Drop connector IDs that aren't currently registered, or that
@@ -94,13 +94,13 @@ final class SettingsAjax {
 			if ( ! $this->is_api_key_connector( $connector_id ) ) {
 				continue;
 			}
-			// Empty string from the UI means "no change" — only an explicit
-			// `null` clears the stored secret. This way the UI can omit the
-			// field on every save without wiping a previously-stored value.
+			// Empty string from the UI means "no change"; explicit `null`
+			// clears the stored secret. This way normal saves can omit the
+			// field without wiping a previously-stored value.
 			if ( '' === $value ) {
 				continue;
 			}
-			$this->credentials->set_secret( $connector_id, $value );
+			$this->credentials->set_secret( $connector_id, is_string( $value ) ? $value : '' );
 			$accepted_secret_ids[] = $connector_id;
 		}
 

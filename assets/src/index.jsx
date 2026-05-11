@@ -668,10 +668,12 @@ function FacilitatorCard( {
 	const [ credentials, setCredentials ] = useState( config.connectorCredentials || {} );
 	const [ pendingSecret, setPendingSecret ] = useState( '' );
 	const [ replaceOpen, setReplaceOpen ] = useState( false );
+	const [ clearSecretRequested, setClearSecretRequested ] = useState( false );
 
 	useEffect( () => {
 		setPendingSecret( '' );
 		setReplaceOpen( false );
+		setClearSecretRequested( false );
 	}, [ facilitator ] );
 
 	const credentialState =
@@ -732,7 +734,8 @@ function FacilitatorCard( {
 	const isDirty =
 		facilitator !== savedId ||
 		( '' !== facilitator && ! isShallowEqual( slot, savedSlot ) ) ||
-		'' !== pendingSecret;
+		'' !== pendingSecret ||
+		clearSecretRequested;
 
 	const onWalletChange = ( edits ) => {
 		setSlots( {
@@ -747,8 +750,8 @@ function FacilitatorCard( {
 			if ( '' !== facilitator ) {
 				partial.facilitators = { [ facilitator ]: slot };
 			}
-			if ( '' !== facilitator && '' !== pendingSecret ) {
-				partial.connector_secrets = { [ facilitator ]: pendingSecret };
+			if ( '' !== facilitator && ( '' !== pendingSecret || clearSecretRequested ) ) {
+				partial.connector_secrets = { [ facilitator ]: clearSecretRequested ? null : pendingSecret };
 			}
 			const { values: merged, ajaxData } = await save( partial );
 			setFacilitator( merged.selected_facilitator_id || '' );
@@ -761,6 +764,7 @@ function FacilitatorCard( {
 			}
 			setPendingSecret( '' );
 			setReplaceOpen( false );
+			setClearSecretRequested( false );
 		} );
 
 	const facilitatorSubtitle =
@@ -919,9 +923,24 @@ function FacilitatorCard( {
 												<Button
 													variant="link"
 													type="button"
-													onClick={ () => setReplaceOpen( true ) }
+													onClick={ () => {
+														setClearSecretRequested( false );
+														setReplaceOpen( true );
+													} }
 												>
 													{ __( 'Replace key', 'simple-x402' ) }
+												</Button>
+												<Button
+													variant="link"
+													isDestructive
+													type="button"
+													onClick={ () => {
+														setPendingSecret( '' );
+														setReplaceOpen( false );
+														setClearSecretRequested( true );
+													} }
+												>
+													{ __( 'Clear key', 'simple-x402' ) }
 												</Button>
 											</HStack>
 										) }

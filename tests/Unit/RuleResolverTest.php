@@ -43,6 +43,16 @@ final class RuleResolverTest extends TestCase {
 		);
 	}
 
+	public function test_rejects_rule_with_scientific_notation_price(): void {
+		add_filter( 'simple_x402_rule_for_request', static fn () => array( 'price' => '1e3' ), 10, 2 );
+		$resolver = new RuleResolver();
+		$this->assertNull(
+			$resolver->resolve(
+				array( 'path' => '/x', 'method' => 'GET', 'post_id' => 0 )
+			)
+		);
+	}
+
 	public function test_non_positive_ttl_falls_back_to_default(): void {
 		add_filter(
 			'simple_x402_rule_for_request',
