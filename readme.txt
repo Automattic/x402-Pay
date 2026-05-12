@@ -1,18 +1,18 @@
-=== x402press ===
+=== x402 Pay ===
 Contributors: automattic
 Tags: paywall, x402, usdc, micropayments, http-402
 Requires at least: 7.0
 Tested up to: 7.0
 Requires PHP: 8.1
 Stable tag: 0.1.0
-License: GPLv2 or later
-License URI: https://www.gnu.org/licenses/gpl-2.0.html
+License: GPLv3 or later
+License URI: https://www.gnu.org/licenses/gpl-3.0.html
 
-Minimal x402 paywall for bots and API clients. Returns HTTP 402 for paywalled posts; clients pay in USDC and retry.
+Minimal HTTP 402 paywall for bots, API clients, and browser wallets. Clients pay in USDC and retry.
 
 == Description ==
 
-x402press gates selected WordPress posts behind an x402 payment. When a paywalled URL is requested without a valid `Payment-Signature` header, the plugin responds with HTTP 402 and a `PAYMENT-REQUIRED` payload describing how to pay. Bots and API clients that speak x402 sign a USDC transfer, retry the request, and get the response.
+x402 Pay gates selected WordPress posts behind an x402 payment. When a paywalled URL is requested without a valid `Payment-Signature` header, the plugin responds with HTTP 402 and a `PAYMENT-REQUIRED` payload describing how to pay. Bots, API clients, and browser-wallet users can sign a USDC transfer, retry the request, and get the response.
 
 Use it to:
 
@@ -20,7 +20,7 @@ Use it to:
 * Offer pay-per-request access to a small set of premium posts.
 * Test the x402 payment flow on Base Sepolia without setting up your own facilitator.
 
-The plugin is inert until you pick a paywall mode in **Settings → x402press**. The default mode is "No posts," so installing the plugin alone does not gate anything or contact any external service.
+The plugin is inert until you pick a paywall mode in **Settings → x402 Pay**. The default mode is "No posts," so installing the plugin alone does not gate anything or contact any external service.
 
 = Audience and modes =
 
@@ -59,7 +59,7 @@ Used only when an admin selects the **Coinbase CDP** connector and saves an API 
 == Installation ==
 
 1. Install and activate the plugin.
-2. Visit **Settings → x402press**.
+2. Visit **Settings → x402 Pay**.
 3. Enter the wallet address that should receive payments.
 4. Pick a paywall mode and audience.
 5. Pick a facilitator. For Coinbase, paste your CDP API Key ID and secret.

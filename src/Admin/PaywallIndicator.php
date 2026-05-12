@@ -80,7 +80,7 @@ final class PaywallIndicator {
 				'href'  => admin_url( 'options-general.php?page=' . SettingsPage::MENU_SLUG ),
 				'meta'  => array(
 					'title' => esc_attr__(
-						'This post is in your paywall scope. Open x402press settings for audience, mode, and price.',
+						'This post is in your paywall scope. Open x402 Pay settings for audience, mode, and price.',
 						'x402press'
 					),
 				),

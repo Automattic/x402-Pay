@@ -1,10 +1,10 @@
-# x402press
+# x402 Pay
 
 Minimal WordPress plugin that gates selected posts behind an x402 payment using the public x402.org facilitator on Base Sepolia.
 
 ## Status
 
-MVP. Bots/API clients only — there is no human checkout UI.
+MVP. Bots/API clients and browser wallets are supported through HTTP 402 payment responses.
 
 ## Requirements
 
@@ -43,7 +43,7 @@ The wallet must hold Base Sepolia USDC. No ETH needed — the x402.org facilitat
 ## What it does
 
 - Adds an `x402paywall` category on activation (distinctive so it won't collide with existing editorial categories).
-- Adds a Settings → x402press page with: wallet address, default price, paywall audience, paywall mode, paywall category (picked from existing categories).
+- Adds a Settings → x402 Pay page with: wallet address, default price, paywall audience, paywall mode, paywall category (picked from existing categories).
 - **Mode** decides which posts qualify:
   - **No posts** (default): paywall disabled; pick another option to turn it on.
   - **All posts**: gate every published post of type `post`.
@@ -61,7 +61,7 @@ See the `x402press_rule_for_request` filter in `src/Services/RuleResolver.php`.
 
 ## Facilitator connectors (WP 7.0+)
 
-x402press discovers facilitator backends through the [WordPress 7.0 Connectors API](https://make.wordpress.org/core/2026/03/18/introducing-the-connectors-api-in-wordpress-7-0/). A facilitator is any external service that can `verify` and `settle` x402 payments — x402.org, a site's own Coinbase CDP account, etc.
+x402 Pay discovers facilitator backends through the [WordPress 7.0 Connectors API](https://make.wordpress.org/core/2026/03/18/introducing-the-connectors-api-in-wordpress-7-0/). A facilitator is any external service that can `verify` and `settle` x402 payments — x402.org, a site's own Coinbase CDP account, etc.
 
 Publishing a facilitator is a two-step contract:
 
@@ -83,7 +83,7 @@ Publishing a facilitator is a two-step contract:
 
 ### Built-in x402.org connector
 
-x402press ships with two connectors out of the box: `x402press_test`, which routes through the public x402.org facilitator on Base Sepolia for testnet trials, and `coinbase_cdp`, which routes through Coinbase Developer Platform on Base mainnet (requires a CDP Secret API Key). Site owners pick one from the Facilitator dropdown in Settings → x402press and enter a receiving wallet + price.
+x402 Pay ships with two connectors out of the box: `x402press_test`, which routes through the public x402.org facilitator on Base Sepolia for testnet trials, and `coinbase_cdp`, which routes through Coinbase Developer Platform on Base mainnet (requires a CDP Secret API Key). Site owners pick one from the Facilitator dropdown in Settings → x402 Pay and enter a receiving wallet + price.
 
 **Managed receiving address:** Extensions may filter `x402press_managed_pool_pay_to` so `payTo` bypasses the per-site wallet field. **Settlement reporting:** after a successful settle, the plugin fires `x402press_payment_settled` and may POST to a URL from the `x402press_ledger_report_url` filter (see `X402Press\Services\FacilitatorHooks`). The ledger (or any hook subscriber that persists externally) should de-duplicate on `transaction`; the plugin may deliver the same settlement more than once under retries or concurrency.
 

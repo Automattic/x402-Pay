@@ -1,11 +1,12 @@
 <?php
 /**
- * Plugin Name:       x402press
- * Description:       Minimal x402 paywall for bots and API clients. Uses x402.org on Base Sepolia.
+ * Plugin Name:       x402 Pay
+ * Description:       Minimal HTTP 402 paywall for bots, API clients, and browser wallets.
  * Version:           0.1.0
  * Requires at least: 7.0
  * Requires PHP:      8.1
- * License:           GPL-2.0-or-later
+ * License:           GPL-3.0-or-later
+ * License URI:       https://www.gnu.org/licenses/gpl-3.0.html
  * Text Domain:       x402press
  *
  * @package X402Press

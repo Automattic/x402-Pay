@@ -1,8 +1,8 @@
 {
-  "name": "automattic/x402press",
-  "description": "Minimal x402 paywall for WordPress.",
+  "name": "automattic/x402-pay",
+  "description": "Minimal HTTP 402 paywall for WordPress.",
   "type": "wordpress-plugin",
-  "license": "GPL-2.0-or-later",
+  "license": "GPL-3.0-or-later",
   "require": {
     "php": ">=8.1",
     "jaybizzle/crawler-detect": "^1.3"

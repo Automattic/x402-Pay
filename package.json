@@ -1,8 +1,8 @@
 {
-	"name": "x402press",
+	"name": "x402-pay",
 	"version": "0.1.0",
 	"private": true,
-	"description": "Build pipeline for the x402press admin UI.",
+	"description": "Build pipeline for the x402 Pay admin UI.",
 	"scripts": {
 		"build": "wp-scripts build --webpack-src-dir=assets/src --output-path=assets/build",
 		"start": "wp-scripts start --webpack-src-dir=assets/src --output-path=assets/build",

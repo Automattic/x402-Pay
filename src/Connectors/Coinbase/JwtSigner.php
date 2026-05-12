@@ -80,7 +80,7 @@ final class JwtSigner implements RequestSigner {
 	 * 32-byte public key) which `sodium_crypto_sign_detached` expects directly.
 	 */
 	private function decode_secret(): string {
-		$raw = base64_decode( $this->key_secret_base64, true );
+		$raw = base64_decode( $this->key_secret_base64, true ); // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_decode -- Coinbase CDP API keys are delivered as base64-encoded Ed25519 secrets.
 		if ( false === $raw ) {
 			throw new RuntimeException( 'Coinbase CDP key secret is not valid base64.' );
 		}
@@ -88,8 +88,8 @@ final class JwtSigner implements RequestSigner {
 			throw new RuntimeException(
 				sprintf(
 					'Coinbase CDP key secret must decode to %d bytes; got %d.',
-					SODIUM_CRYPTO_SIGN_SECRETKEYBYTES,
-					strlen( $raw )
+					esc_html( (string) SODIUM_CRYPTO_SIGN_SECRETKEYBYTES ),
+					esc_html( (string) strlen( $raw ) )
 				)
 			);
 		}
@@ -97,6 +97,6 @@ final class JwtSigner implements RequestSigner {
 	}
 
 	private static function base64url( string $bytes ): string {
-		return rtrim( strtr( base64_encode( $bytes ), '+/', '-_' ), '=' );
+		return rtrim( strtr( base64_encode( $bytes ), '+/', '-_' ), '=' ); // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_encode -- JWT segments require base64url encoding.
 	}
 }
