@@ -802,47 +802,8 @@ function FacilitatorCard( {
 				{ '' !== facilitator && (
 					<>
 						<div className="x402press-page__divider" />
-						{ walletInputVisible ? (
-							<div
-								className={
-									walletError
-										? 'x402press-page__wallet x402press-page__wallet--error'
-										: 'x402press-page__wallet'
-								}
-							>
-								<TextControl
-									__nextHasNoMarginBottom
-									__next40pxDefaultSize
-									label={ __( 'Receiving wallet', 'x402press' ) }
-									placeholder={ __( 'Add a valid EVM address 0x...', 'x402press' ) }
-									help={
-										walletError ? (
-											<span
-												className="x402press-page__field-error"
-												role="alert"
-											>
-												{ walletError }
-											</span>
-										) : (
-											walletHelp
-										)
-									}
-									value={ walletValue }
-									onChange={ ( value ) => onWalletChange( { wallet_address: value } ) }
-									aria-invalid={ walletError ? 'true' : 'false' }
-								/>
-							</div>
-						) : (
-							<Text size={ 13 } variant="muted">
-								{ __(
-									'Receiving address is managed by WordPress.com for this facilitator.',
-									'x402press'
-								) }
-							</Text>
-						) }
 						{ apiKeyInputsVisible && (
 							<>
-								<div className="x402press-page__divider" />
 								<div className="x402press-page__api-keys">
 									{ adminMeta && (
 										<div className="x402press-page__api-keys-intro">
@@ -978,7 +939,46 @@ function FacilitatorCard( {
 										) }
 									</div>
 								</div>
+								<div className="x402press-page__divider" />
 							</>
+						) }
+						{ walletInputVisible ? (
+							<div
+								className={
+									walletError
+										? 'x402press-page__wallet x402press-page__wallet--error'
+										: 'x402press-page__wallet'
+								}
+							>
+								<TextControl
+									__nextHasNoMarginBottom
+									__next40pxDefaultSize
+									label={ __( 'Receiving wallet', 'x402press' ) }
+									placeholder={ __( 'Add a valid EVM address 0x...', 'x402press' ) }
+									help={
+										walletError ? (
+											<span
+												className="x402press-page__field-error"
+												role="alert"
+											>
+												{ walletError }
+											</span>
+										) : (
+											walletHelp
+										)
+									}
+									value={ walletValue }
+									onChange={ ( value ) => onWalletChange( { wallet_address: value } ) }
+									aria-invalid={ walletError ? 'true' : 'false' }
+								/>
+							</div>
+						) : (
+							<Text size={ 13 } variant="muted">
+								{ __(
+									'Receiving address is managed by WordPress.com for this facilitator.',
+									'x402press'
+								) }
+							</Text>
 						) }
 					</>
 				) }
