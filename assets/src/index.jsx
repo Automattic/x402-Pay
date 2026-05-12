@@ -212,29 +212,38 @@ function DiagnosticProbeLine( { pending, awaiting, success, durationMs, failureM
 	}
 	if ( infoMessage ) {
 		return (
-			<Text size={ 13 } variant="muted">
-				{ infoMessage }
-			</Text>
+			<span className="x402press-page__probe-result x402press-page__probe-result--info">
+				<span className="x402press-page__probe-result__dot" aria-hidden="true" />
+				<Text size={ 13 } variant="muted">
+					{ infoMessage }
+				</Text>
+			</span>
 		);
 	}
 	if ( success ) {
 		return (
-			<Text size={ 13 } variant="muted">
-				{ durationMs != null
-					? sprintf(
-						/* translators: %d: round-trip time in milliseconds. */
-						__( '✓ Succeeded in %dms', 'x402press' ),
-						durationMs
-					)
-					: __( '✓ Succeeded', 'x402press' ) }
-			</Text>
+			<span className="x402press-page__probe-result x402press-page__probe-result--ok">
+				<span className="x402press-page__probe-result__dot" aria-hidden="true" />
+				<Text size={ 13 } variant="muted">
+					{ durationMs != null
+						? sprintf(
+							/* translators: %d: round-trip time in milliseconds. */
+							__( 'Succeeded in %dms', 'x402press' ),
+							durationMs
+						)
+						: __( 'Succeeded', 'x402press' ) }
+				</Text>
+			</span>
 		);
 	}
 	if ( failureMessage ) {
 		return (
-			<Text size={ 13 } variant="muted">
-				{ `✗ ${ failureMessage }` }
-			</Text>
+			<span className="x402press-page__probe-result x402press-page__probe-result--fail">
+				<span className="x402press-page__probe-result__dot" aria-hidden="true" />
+				<Text size={ 13 } variant="muted">
+					{ failureMessage }
+				</Text>
+			</span>
 		);
 	}
 	return null;
@@ -334,6 +343,39 @@ const PAYWALL_MODE_FIELDS = [
 	},
 ];
 
+const STATUS_PILL_LABELS = {
+	running: __( 'Checking…', 'x402press' ),
+	ok: __( 'Healthy', 'x402press' ),
+	attention: __( 'Needs attention', 'x402press' ),
+	fail: __( 'Issues found', 'x402press' ),
+	idle: __( 'Not yet checked', 'x402press' ),
+};
+
+function deriveOverallStatus( runChecksPending, facilitatorCheck, paywallCheck ) {
+	if ( runChecksPending ) {
+		return 'running';
+	}
+	if ( facilitatorCheck == null && paywallCheck == null ) {
+		return 'idle';
+	}
+	if ( facilitatorCheck?.failureMessage || paywallCheck?.failureMessage ) {
+		return 'fail';
+	}
+	if ( facilitatorCheck?.success === true && paywallCheck?.success === true ) {
+		return 'ok';
+	}
+	return 'attention';
+}
+
+function StatusPill( { status } ) {
+	return (
+		<span className={ `x402press-status-pill x402press-status-pill--${ status }` }>
+			<span className="x402press-status-pill__dot" aria-hidden="true" />
+			{ STATUS_PILL_LABELS[ status ] }
+		</span>
+	);
+}
+
 /**
  * @param {object} props
  * @param {boolean} props.paywallDirty
@@ -356,23 +398,32 @@ function RunChecksCard( {
 		facilitatorCheck != null ||
 		paywallCheck != null;
 
+	const overallStatus = deriveOverallStatus(
+		runChecksPending,
+		facilitatorCheck,
+		paywallCheck
+	);
+
 	return (
 		<Card>
 			<CardHeader>
-				<CardTitle
-					title={ __( 'Connection & paywall checks', 'x402press' ) }
-					subtitle={ __(
-						'Verify facilitator reachability, then probe the live paywall on a matching post.',
-						'x402press'
-					) }
-				/>
+				<HStack justify="space-between" alignment="center" spacing={ 3 }>
+					<CardTitle
+						title={ __( 'Status', 'x402press' ) }
+						subtitle={ __(
+							'Facilitator reachability and a live probe of the paywall on a matching post.',
+							'x402press'
+						) }
+					/>
+					<StatusPill status={ overallStatus } />
+				</HStack>
 			</CardHeader>
 			<CardBody>
 				<VStack spacing={ 3 }>
 					{ facilitatorDirty && (
 						<Text size={ 13 } variant="muted">
 							{ __(
-								'Save your facilitator settings before running checks.',
+								'Save your facilitator settings to refresh the status.',
 								'x402press'
 							) }
 						</Text>
@@ -380,7 +431,7 @@ function RunChecksCard( {
 					{ paywallDirty && (
 						<Text size={ 13 } variant="muted">
 							{ __(
-								'Save your paywall scope changes before running checks.',
+								'Save your paywall scope changes to refresh the status.',
 								'x402press'
 							) }
 						</Text>
@@ -389,7 +440,7 @@ function RunChecksCard( {
 						<VStack spacing={ 3 }>
 							<VStack spacing={ 0 } className="x402press-page__run-checks-step">
 								<Text size={ 12 } weight={ 600 }>
-									{ __( '1. Facilitator connectivity', 'x402press' ) }
+									{ __( 'Facilitator connectivity', 'x402press' ) }
 								</Text>
 								<DiagnosticProbeLine
 									pending={ facilitatorCheck?.pending === true }
@@ -402,7 +453,7 @@ function RunChecksCard( {
 							</VStack>
 							<VStack spacing={ 0 } className="x402press-page__run-checks-step">
 								<Text size={ 12 } weight={ 600 }>
-									{ __( '2. Paywall live probe', 'x402press' ) }
+									{ __( 'Paywall live probe', 'x402press' ) }
 								</Text>
 								<DiagnosticProbeLine
 									pending={ paywallCheck?.pending === true }
@@ -417,7 +468,7 @@ function RunChecksCard( {
 					) }
 					<HStack spacing={ 3 } justify="flex-start" className="x402press-page__probe-row">
 						<Button
-							variant="primary"
+							variant="secondary"
 							size="compact"
 							type="button"
 							icon={ boltIcon }
@@ -430,8 +481,8 @@ function RunChecksCard( {
 							aria-busy={ runChecksPending }
 						>
 							{ runChecksPending
-								? __( 'Running checks…', 'x402press' )
-								: __( 'Run checks', 'x402press' ) }
+								? __( 'Re-checking…', 'x402press' )
+								: __( 'Re-check', 'x402press' ) }
 						</Button>
 					</HStack>
 				</VStack>
@@ -1227,10 +1278,29 @@ function SettingsApp() {
 		return () => clearTimeout( t );
 	}, [] );
 
+	// Auto-run once on mount so the Status card paints a live result without
+	// waiting for the operator to press a button. Subsequent re-runs are
+	// driven by the Re-check button or by invalidateChecksFromFormEdit.
+	const didAutoRunRef = useRef( false );
+	useEffect( () => {
+		if ( didAutoRunRef.current ) return;
+		didAutoRunRef.current = true;
+		onRunChecks();
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [] );
+
 	return (
 		<div className="x402press-page__content">
 			<div className="x402press-page__notices" ref={ noticesRef } />
 			<VStack spacing={ 6 }>
+				<RunChecksCard
+					paywallDirty={ paywallDirty }
+					facilitatorDirty={ facilitatorDirty }
+					runChecksPending={ runChecksPending }
+					onRunChecks={ onRunChecks }
+					facilitatorCheck={ facilitatorCheck }
+					paywallCheck={ paywallCheck }
+				/>
 				<PaywallScopeCard
 					saved={ saved }
 					save={ save }
@@ -1250,14 +1320,6 @@ function SettingsApp() {
 					slots={ slots }
 					setSlots={ setSlots }
 					onFacilitatorFormChange={ invalidateChecksFromFormEdit }
-				/>
-				<RunChecksCard
-					paywallDirty={ paywallDirty }
-					facilitatorDirty={ facilitatorDirty }
-					runChecksPending={ runChecksPending }
-					onRunChecks={ onRunChecks }
-					facilitatorCheck={ facilitatorCheck }
-					paywallCheck={ paywallCheck }
 				/>
 			</VStack>
 		</div>

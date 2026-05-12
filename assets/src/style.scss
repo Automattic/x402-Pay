@@ -145,6 +145,53 @@ body.x402press-screen .x402press-page__card-footer {
     text-transform: uppercase;
 }
 
+.x402press-status-pill {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	padding: 4px 10px;
+	border-radius: 999px;
+	font-size: 12px;
+	font-weight: 500;
+	line-height: 1;
+	background: #f0f0f0;
+	color: #50575e;
+	white-space: nowrap;
+
+	&__dot {
+		width: 8px;
+		height: 8px;
+		border-radius: 50%;
+		background: currentColor;
+		flex-shrink: 0;
+	}
+
+	&--ok { background: #e7f6ea; color: #15672a; }
+	&--fail { background: #fcebec; color: #8a1f24; }
+	&--attention { background: #fcf3e3; color: #8a5a14; }
+	&--running { background: #e6f1ff; color: #15518a; }
+}
+
+// Step result rows inside the Status card. The leading dot mirrors the
+// overall status pill's colour vocabulary so the eye can correlate the
+// per-step state with the headline at a glance.
+.x402press-page__probe-result {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+
+	&__dot {
+		width: 8px;
+		height: 8px;
+		border-radius: 50%;
+		flex-shrink: 0;
+	}
+
+	&--ok &__dot { background: #15672a; }
+	&--fail &__dot { background: #8a1f24; }
+	&--info &__dot { background: #8c8f94; }
+}
+
 .x402press-spinner-icon {
 	animation: x402press-spin 1s linear infinite;
 	transform-origin: center;
