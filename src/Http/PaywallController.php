@@ -130,6 +130,7 @@ final class PaywallController {
 	/**
 	 * @param array{
 	 *   path:string,
+	 *   resource_url?:string,
 	 *   method:string,
 	 *   post_id:int,
 	 *   singular?:bool,
@@ -172,8 +173,16 @@ final class PaywallController {
 			return;
 		}
 
+		$pay_to = $this->settings->resolved_pay_to_address();
+		if ( ! SettingsRepository::is_valid_evm_address( $pay_to ) ) {
+			// No valid receiving wallet configured — do not ask visitors to sign
+			// a payment that cannot safely settle to the publisher.
+			return;
+		}
+
 		$grant_token = $this->extract_grant_token( $request );
-		if ( '' !== $grant_token && $this->grants->redeem( $grant_token, $request['path'] ) ) {
+		$grant_scope = $this->grant_scope( $request );
+		if ( '' !== $grant_token && $this->grants->redeem( $grant_token, $grant_scope ) ) {
 			return;
 		}
 
@@ -181,9 +190,9 @@ final class PaywallController {
 		$this->client_profile = $this->filtered_client_profile( $request );
 
 		$requirements = $this->builder( $facilitator )->build(
-			$this->settings->resolved_pay_to_address(),
+			$pay_to,
 			$rule['price'],
-			home_url( $request['path'] ),
+			$this->resource_url( $request ),
 			$rule['description']
 		);
 
@@ -229,7 +238,7 @@ final class PaywallController {
 
 		$wallet = $this->extract_wallet( $payload );
 		$token  = $this->grants->issue(
-			$request['path'],
+			$grant_scope,
 			$rule['ttl'],
 			array(
 				'transaction' => $settle['transaction'] ?? null,
@@ -325,15 +334,15 @@ final class PaywallController {
 			$request
 		);
 
-		$site_name      = function_exists( 'get_bloginfo' ) ? (string) get_bloginfo( 'name' ) : '';
-		$site_icon_url  = function_exists( 'get_site_icon_url' ) ? (string) get_site_icon_url( 96 ) : '';
-		$site_block     = $this->build_site_block( $site_name, $site_icon_url );
+		$site_name     = function_exists( 'get_bloginfo' ) ? (string) get_bloginfo( 'name' ) : '';
+		$site_icon_url = function_exists( 'get_site_icon_url' ) ? (string) get_site_icon_url( 96 ) : '';
+		$site_block    = $this->build_site_block( $site_name, $site_icon_url );
 
-		$post_title     = $this->paywall_post_title( $post_id );
-		$title_block    = '' !== $post_title
+		$post_title    = $this->paywall_post_title( $post_id );
+		$title_block   = '' !== $post_title
 			? '<h2 class="x402press-title">' . esc_html( $post_title ) . '</h2>'
 			: '';
-		$excerpt_block  = '' !== $excerpt
+		$excerpt_block = '' !== $excerpt
 			? '<p class="x402press-excerpt">' . esc_html( $excerpt ) . '</p>'
 			: '';
 
@@ -399,14 +408,14 @@ final class PaywallController {
 		if ( '' === $name && '' === $icon_url ) {
 			return '';
 		}
-		$home = function_exists( 'home_url' ) ? (string) home_url( '/' ) : '';
-		$icon = '' !== $icon_url
+		$home      = function_exists( 'home_url' ) ? (string) home_url( '/' ) : '';
+		$icon      = '' !== $icon_url
 			? '<img class="x402press-site-icon" src="' . esc_url( $icon_url ) . '" alt="" width="20" height="20">'
 			: '';
 		$name_html = '' !== $name
 			? '<span class="x402press-site-name">' . esc_html( $name ) . '</span>'
 			: '';
-		$inner = $icon . $name_html;
+		$inner     = $icon . $name_html;
 		if ( '' !== $home ) {
 			return '<a class="x402press-site" href="' . esc_url( $home ) . '">' . $inner . '</a>';
 		}
@@ -517,7 +526,7 @@ final class PaywallController {
 		// `add_query_arg( array() )` returns the current request URI (path + query
 		// string), so the retry hits the exact URL that 402'd — critical when the
 		// site uses Plain permalinks and posts are addressed via `?p=<id>`.
-		$resource_url = home_url( add_query_arg( array() ) );
+		$resource_url = $this->resource_url( $request );
 
 		$providers = $this->providers->eligible(
 			array(
@@ -549,7 +558,7 @@ final class PaywallController {
 				'config' => $provider['config'],
 			);
 			$slots                      .= '<div data-x402press-provider="' . esc_attr( $id ) . '"></div>';
-			$script_tags                .= '<script defer src="' . esc_url( $provider['script_url'] ) . '"></script>';
+			$script_tags                .= '<script defer src="' . esc_url( $provider['script_url'] ) . '"></script>'; // phpcs:ignore WordPress.WP.EnqueuedResources.NonEnqueuedScript -- The 402 body is a standalone response outside the theme enqueue lifecycle.
 		}
 
 		$context_json = wp_json_encode(
@@ -560,12 +569,14 @@ final class PaywallController {
 			return '';
 		}
 
-		$host_url = plugins_url( 'src/Payment/loader.js', X402PRESS_FILE );
+		$host_url       = plugins_url( 'src/Payment/loader.js', X402PRESS_FILE );
+		$context_script = '<script type="application/json" id="x402press-payment-context">' . $context_json . '</script>'; // phpcs:ignore WordPress.WP.EnqueuedResources.NonEnqueuedScript -- JSON data script for the standalone 402 response.
+		$host_script    = '<script defer src="' . esc_url( $host_url ) . '"></script>'; // phpcs:ignore WordPress.WP.EnqueuedResources.NonEnqueuedScript -- The 402 body is a standalone response outside the theme enqueue lifecycle.
 
 		return '<div class="x402press-checkout">'
 			. '<div class="x402press-providers">' . $slots . '</div>'
-			. '<script type="application/json" id="x402press-payment-context">' . $context_json . '</script>'
-			. '<script defer src="' . esc_url( $host_url ) . '"></script>'
+			. $context_script
+			. $host_script
 			. $script_tags
 			. '</div>';
 	}
@@ -838,6 +849,30 @@ CSS;
 		// have their own semantics).
 		$raw = $_COOKIE[ self::GRANT_COOKIE ] ?? '';
 		return is_string( $raw ) ? (string) wp_unslash( $raw ) : '';
+	}
+
+	/**
+	 * The exact URL being paid for. WordPress bootstrap passes this as path +
+	 * query; tests and older callers fall back to the historical path-only
+	 * behavior.
+	 *
+	 * @param array<string,mixed> $request
+	 */
+	private function resource_url( array $request ): string {
+		$resource = isset( $request['resource_url'] ) ? (string) $request['resource_url'] : '';
+		return '' !== $resource ? $resource : home_url( (string) ( $request['path'] ?? '/' ) );
+	}
+
+	/**
+	 * Scope grants to the exact paid resource when available so `/?p=1` does
+	 * not unlock `/?p=2` on plain-permalink sites.
+	 *
+	 * @param array<string,mixed> $request
+	 */
+	private function grant_scope( array $request ): string {
+		return isset( $request['resource_url'] ) && '' !== (string) $request['resource_url']
+			? (string) $request['resource_url']
+			: (string) ( $request['path'] ?? '' );
 	}
 
 	/**

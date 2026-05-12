@@ -54,7 +54,7 @@ final class SettingsPageTest extends TestCase {
 			array(
 				'selected_facilitator_id'  => 'x402press_test',
 				'facilitators'             => array(
-					'x402press_test' => array( 'wallet_address' => '0xABC' ),
+					'x402press_test' => array( 'wallet_address' => '0x1111111111111111111111111111111111111111' ),
 				),
 				'default_price'            => '0.5',
 				'paywall_category_term_id' => 2,
@@ -62,7 +62,7 @@ final class SettingsPageTest extends TestCase {
 		);
 
 		$this->assertSame( 'x402press_test', $result['selected_facilitator_id'] );
-		$this->assertSame( '0xABC', $result['facilitators']['x402press_test']['wallet_address'] );
+		$this->assertSame( '0x1111111111111111111111111111111111111111', $result['facilitators']['x402press_test']['wallet_address'] );
 		$this->assertSame( '0.5', $result['default_price'] );
 		$this->assertSame( 'none', $result['paywall_mode'] );
 		$this->assertSame( 'bots', $result['paywall_audience'] );

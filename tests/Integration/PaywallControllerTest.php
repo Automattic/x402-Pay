@@ -26,7 +26,7 @@ final class PaywallControllerTest extends TestCase {
 			'x402press_settings' => array(
 				'selected_facilitator_id' => 'x402press_test',
 				'facilitators'            => array(
-					'x402press_test' => array( 'wallet_address' => '0xreceiver' ),
+					'x402press_test' => array( 'wallet_address' => '0x1111111111111111111111111111111111111111' ),
 				),
 				'default_price'           => '0.01',
 				'paywall_audience'        => SettingsRepository::AUDIENCE_BOTS,
@@ -180,7 +180,7 @@ final class PaywallControllerTest extends TestCase {
 		$this->assertSame( 402, $GLOBALS['__x402press_response']['status'] );
 		$body = $this->assert_402_envelope();
 		// PaymentRequirements live inside the spec envelope, not in a separate header.
-		$this->assertSame( '0xreceiver', $body['accepts'][0]['payTo'] );
+		$this->assertSame( '0x1111111111111111111111111111111111111111', $body['accepts'][0]['payTo'] );
 		$this->assertSame( '10000', $body['accepts'][0]['maxAmountRequired'] );
 		$this->assertSame( 'payment_required', $body['error'] );
 		// Spec response carries no `payment-required` header — everything is in the JSON body.
@@ -377,6 +377,57 @@ final class PaywallControllerTest extends TestCase {
 		$this->assertSame( 402, $GLOBALS['__x402press_response']['status'] );
 	}
 
+	public function test_token_for_one_query_resource_does_not_redeem_against_another(): void {
+		add_filter( 'x402press_rule_for_request', static fn () => array( 'price' => '0.01' ), 10, 2 );
+		$token = ( new GrantStore() )->issue( 'https://example.test/?p=1', 60, array() );
+
+		$this->controller()->handle(
+			array(
+				'path'         => '/',
+				'resource_url' => 'https://example.test/?p=2',
+				'method'       => 'GET',
+				'post_id'      => 2,
+				'headers'      => array( PaywallController::GRANT_HEADER => $token ),
+			)
+		);
+
+		$this->assertSame( 402, $GLOBALS['__x402press_response']['status'] );
+	}
+
+	public function test_requirements_use_exact_resource_url_when_present(): void {
+		add_filter( 'x402press_rule_for_request', static fn () => array( 'price' => '0.01' ), 10, 2 );
+
+		$this->controller()->handle(
+			array(
+				'path'         => '/',
+				'resource_url' => 'https://example.test/?p=123',
+				'method'       => 'GET',
+				'post_id'      => 123,
+				'headers'      => array(),
+			)
+		);
+
+		$body = $this->assert_402_envelope();
+		$this->assertSame( 'https://example.test/?p=123', $body['accepts'][0]['resource'] );
+	}
+
+	public function test_invalid_receiving_wallet_leaves_paywall_inert(): void {
+		$GLOBALS['__x402press_options'][ SettingsRepository::OPTION_NAME ]['facilitators']['x402press_test']['wallet_address'] = '0xnot-a-wallet';
+		add_filter( 'x402press_rule_for_request', static fn () => array( 'price' => '0.01' ), 10, 2 );
+
+		$this->controller()->handle(
+			array(
+				'path'    => '/foo',
+				'method'  => 'GET',
+				'post_id' => 0,
+				'headers' => array(),
+			)
+		);
+
+		$this->assertSame( 200, $GLOBALS['__x402press_response']['status'] );
+		$this->assertFalse( $GLOBALS['__x402press_response']['exited'] );
+	}
+
 	public function test_client_profile_filter_not_invoked_when_grant_short_circuits(): void {
 		add_filter( 'x402press_rule_for_request', static fn () => array( 'price' => '0.01' ), 10, 2 );
 		$token = ( new GrantStore() )->issue( '/foo', 60, array() );
@@ -487,6 +538,53 @@ final class PaywallControllerTest extends TestCase {
 		// The token from the response header must redeem against the same path.
 		$token = substr( $grant_line, strlen( PaywallController::GRANT_HEADER . ': ' ) );
 		$this->assertTrue( ( new GrantStore() )->redeem( $token, '/foo' ) );
+	}
+
+	public function test_success_grant_redeems_against_exact_resource_url_when_present(): void {
+		add_filter(
+			'x402press_rule_for_request',
+			static fn () => array(
+				'price' => '0.01',
+				'ttl'   => 600,
+			),
+			10,
+			2
+		);
+
+		$payload = X402HeaderCodec::encode(
+			array(
+				'scheme'  => 'exact',
+				'payload' => array( 'authorization' => array( 'from' => '0xbuyer' ) ),
+			)
+		);
+
+		$GLOBALS['__x402press_http_queue'] = array(
+			array(
+				'response' => array( 'code' => 200 ),
+				'body'     => '{"isValid":true}',
+			),
+			array(
+				'response' => array( 'code' => 200 ),
+				'body'     => '{"success":true,"transaction":"0xdead"}',
+			),
+		);
+
+		$this->controller()->handle(
+			array(
+				'path'         => '/',
+				'resource_url' => 'https://example.test/?p=123',
+				'method'       => 'GET',
+				'post_id'      => 123,
+				'headers'      => array( 'X-Payment' => $payload ),
+			)
+		);
+
+		$success_headers = $GLOBALS['__x402press_response']['success_headers'];
+		$grant_line      = self::find_header_line( $success_headers, PaywallController::GRANT_HEADER . ': ' );
+		$this->assertNotNull( $grant_line );
+		$token = substr( $grant_line, strlen( PaywallController::GRANT_HEADER . ': ' ) );
+		$this->assertTrue( ( new GrantStore() )->redeem( $token, 'https://example.test/?p=123' ) );
+		$this->assertFalse( ( new GrantStore() )->redeem( $token, 'https://example.test/?p=456' ) );
 	}
 
 	public function test_settle_success_emits_x_payment_response_receipt(): void {
@@ -653,7 +751,7 @@ final class PaywallControllerTest extends TestCase {
 		$this->assertSame( 42, $captured[0]['post_id'] );
 		$this->assertSame( '0.02', $captured[0]['amount'] );
 		$this->assertSame( 'x402press_test', $captured[0]['connector_id'] );
-		$this->assertSame( '0xreceiver', $captured[0]['pay_to'] );
+		$this->assertSame( '0x1111111111111111111111111111111111111111', $captured[0]['pay_to'] );
 	}
 
 	public function test_verify_failure_responds_402(): void {

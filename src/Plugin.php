@@ -129,22 +129,24 @@ final class Plugin {
 		add_action(
 			'template_redirect',
 			static function () use ( $controller ): void {
-				$post_id = is_singular() ? (int) get_queried_object_id() : 0;
-				$path    = (string) ( wp_parse_url(
-					home_url( add_query_arg( array() ) ),
+				$resource_url = home_url( add_query_arg( array() ) );
+				$post_id      = is_singular() ? (int) get_queried_object_id() : 0;
+				$path         = (string) ( wp_parse_url(
+					$resource_url,
 					PHP_URL_PATH
 				) ?? '/' );
-				$method  = isset( $_SERVER['REQUEST_METHOD'] )
+				$method       = isset( $_SERVER['REQUEST_METHOD'] )
 					? sanitize_text_field( (string) wp_unslash( $_SERVER['REQUEST_METHOD'] ) )
 					: 'GET';
 
 				$controller->handle(
 					array(
-						'path'     => $path,
-						'method'   => $method,
-						'post_id'  => $post_id,
-						'singular' => is_singular(),
-						'headers'  => self::collect_headers(),
+						'path'         => $path,
+						'resource_url' => $resource_url,
+						'method'       => $method,
+						'post_id'      => $post_id,
+						'singular'     => is_singular(),
+						'headers'      => self::collect_headers(),
 					)
 				);
 
