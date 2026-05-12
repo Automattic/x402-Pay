@@ -102,12 +102,12 @@ final class SettingsPage {
 	}
 
 	/**
-	 * Add the Settings → x402press menu item.
+	 * Add the Settings → x402 Paywall menu item.
 	 */
 	public function add_menu(): void {
 		add_options_page(
-			__( 'x402press', 'x402press' ),
-			__( 'x402press', 'x402press' ),
+			__( 'x402 Paywall', 'x402press' ),
+			__( 'x402 Paywall', 'x402press' ),
 			'manage_options',
 			self::MENU_SLUG,
 			array( $this, 'render' )
@@ -140,7 +140,7 @@ final class SettingsPage {
 		<div class="wrap">
 			<header class="x402press-page__header">
 				<h1 class="x402press-page__header-title">
-					<?php esc_html_e( 'x402press', 'x402press' ); ?>
+					<?php esc_html_e( 'x402 Paywall', 'x402press' ); ?>
 				</h1>
 				<p class="x402press-page__header-subtitle">
 					<?php

@@ -29,10 +29,7 @@
 
 	// Popular wallets we surface as install links when they're NOT
 	// announced via EIP-6963. Match key is `rdns` (reverse-DNS, the
-	// stable identifier each wallet emits). Icons are real brand SVGs
-	// bundled under `src/Payment/Providers/EvmWallet/icons/`; their
-	// public URLs ship via `host.config.suggestionIcons[rdns]` so the
-	// JS doesn't need to know plugin install paths.
+	// stable identifier each wallet emits).
 	var SUGGESTED_WALLETS = [
 		{ rdns: 'io.metamask',         name: 'MetaMask',        installUrl: 'https://metamask.io/download/' },
 		{ rdns: 'me.rainbow',          name: 'Rainbow',         installUrl: 'https://rainbow.me/download/' },
@@ -231,8 +228,6 @@
 				: 'don’t have a wallet?';
 			host.container.appendChild( divider );
 
-			var iconUrls = ( host.config && host.config.suggestionIcons ) || {};
-
 			missing.forEach( function ( w ) {
 				var link = document.createElement( 'a' );
 				link.className = 'x402press-pay-button x402press-pay-button--install';
@@ -240,12 +235,7 @@
 				link.target = '_blank';
 				link.rel = 'noopener noreferrer';
 
-				var iconHtml = iconUrls[ w.rdns ]
-					? '<span class="x402press-pay-icon" aria-hidden="true"><img src="'
-						+ iconUrls[ w.rdns ] + '" alt=""></span>'
-					: '';
 				link.innerHTML = ''
-					+ iconHtml
 					+ '<span class="x402press-pay-label">Install ' + w.name + '</span>'
 					+ '<span class="x402press-pay-meta" aria-hidden="true">↗</span>';
 				host.container.appendChild( link );

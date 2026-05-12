@@ -164,8 +164,8 @@ final class X402FacilitatorClient implements Facilitator {
 			'Content-Type' => 'application/json',
 			'Accept'       => 'application/json',
 		);
-		$base = rtrim( $this->profile->facilitator_url, '/' ) . '/';
-		$url  = $base . ltrim( $endpoint, '/' );
+		$base    = rtrim( $this->profile->facilitator_url, '/' ) . '/';
+		$url     = $base . ltrim( $endpoint, '/' );
 
 		if ( null !== $this->profile->signer ) {
 			try {

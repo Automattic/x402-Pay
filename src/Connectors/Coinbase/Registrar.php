@@ -67,30 +67,30 @@ final class Registrar {
 			return $existing;
 		}
 		return array(
-			'introHeadline'          => __(
+			'introHeadline'           => __(
 				'Connect this site to Coinbase to accept USDC payments on Base mainnet.',
 				'x402press'
 			),
 			// `<docs/>` is a self-closing placeholder the React app interpolates
 			// into a link to `docsUrl`.
-			'introBody'              => __(
+			'introBody'               => __(
 				'Read the <docs/>, then paste the two values it gives you below.',
 				'x402press'
 			),
-			'docsLinkText'           => __( 'guide on creating your API keys', 'x402press' ),
-			'docsUrl'                => 'https://docs.cdp.coinbase.com/api-reference/v2/authentication#secret-api-key',
-			'keyIdPlaceholder'       => '00000000-0000-0000-0000-000000000000',
+			'docsLinkText'            => __( 'guide on creating your API keys', 'x402press' ),
+			'docsUrl'                 => 'https://docs.cdp.coinbase.com/api-reference/v2/authentication#secret-api-key',
+			'keyIdPlaceholder'        => '00000000-0000-0000-0000-000000000000',
 			// UUID 8-4-4-4-12. Hex char class lists both cases so the JS RegExp
 			// constructor doesn't need flags.
-			'keyIdPattern'           => '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$',
-			'keyIdInvalidMessage'    => __(
+			'keyIdPattern'            => '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$',
+			'keyIdInvalidMessage'     => __(
 				'Doesn’t look like a UUID. Copy the value labelled “API Key ID” in the CDP Portal.',
 				'x402press'
 			),
-			'keySecretPlaceholder'   => __( 'Paste the long secret string from the CDP Portal.', 'x402press' ),
+			'keySecretPlaceholder'    => __( 'Paste the long secret string from the CDP Portal.', 'x402press' ),
 			// Loose sanity check: base64 alphabet (incl. URL-safe variant) plus
 			// padding, ≥40 chars. Real validation happens at first verify call.
-			'keySecretPattern'       => '^[A-Za-z0-9+/_=-]{40,}$',
+			'keySecretPattern'        => '^[A-Za-z0-9+/_=-]{40,}$',
 			'keySecretInvalidMessage' => __(
 				'That doesn’t look like a CDP key secret. Copy the “API Key Secret” value, not the JSON key/value pair.',
 				'x402press'
@@ -109,7 +109,7 @@ final class Registrar {
 			'description'    => 'Coinbase Developer Platform x402 facilitator on Base mainnet (USDC). Requires a CDP API key.',
 			'type'           => ConnectorRegistry::FACILITATOR_TYPE,
 			'authentication' => array( 'method' => 'api_key' ),
-			'plugin'         => array( 'file' => 'x402press/x402press.php' ),
+			'plugin'         => array( 'file' => 'x402-paywall/x402press.php' ),
 		);
 	}
 }

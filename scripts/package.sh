@@ -19,13 +19,14 @@ echo "→ composer install --no-dev (for release)"
 composer install --no-dev --optimize-autoloader --no-progress --quiet
 trap 'echo "→ restoring dev composer install"; composer install --no-progress --quiet >/dev/null' EXIT
 
-zipdest="${REPO_ROOT}/dist/x402press.zip"
+zipdest="${REPO_ROOT}/dist/x402-paywall.zip"
 tmp="$(mktemp -d)"
 
-root="${tmp}/x402press"
+root="${tmp}/x402-paywall"
 mkdir -p "${root}/assets"
 cp x402press.php "${root}/"
 cp -R src "${root}/"
+find "${root}/src" -type d -empty -delete 2>/dev/null || true
 # Prune dangling symlinks left over from local path-repo dev (e.g. companion
 # plugins) so `cp -RL` doesn't fail trying to follow them, then drop any
 # namespace directory that's now empty as a result.
@@ -38,6 +39,6 @@ cp -R assets/build "${root}/assets/"
 [[ -f LICENSE ]]    && cp LICENSE    "${root}/"
 
 rm -f "${zipdest}"
-( cd "${tmp}" && zip -qr "${zipdest}" x402press -x '*.DS_Store' )
+( cd "${tmp}" && zip -qr "${zipdest}" x402-paywall -x '*.DS_Store' )
 rm -rf "${tmp}"
-echo "→ dist/x402press.zip"
+echo "→ dist/x402-paywall.zip"

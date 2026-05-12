@@ -64,7 +64,7 @@ final class TestConnectorRegistrar {
 			'description'    => 'Built-in test facilitator. Routes through x402.org on Base Sepolia — no real funds move.',
 			'type'           => ConnectorRegistry::FACILITATOR_TYPE,
 			'authentication' => array( 'method' => 'none' ),
-			'plugin'         => array( 'file' => 'x402press/x402press.php' ),
+			'plugin'         => array( 'file' => 'x402-paywall/x402press.php' ),
 		);
 	}
 }

@@ -28,7 +28,7 @@ final class SettingsChangeNotifier {
 			'warning',
 			sprintf(
 				/* translators: %s: deleted paywall category name. */
-				__( 'The paywall category "%s" was deleted. x402press has switched to the default paywall category so gating keeps working; update your paywall category in Settings → x402press if you want a different one.', 'x402press' ),
+				__( 'The paywall category "%s" was deleted. x402 Paywall has switched to the default paywall category so gating keeps working; update your paywall category in Settings → x402 Paywall if you want a different one.', 'x402press' ),
 				$name
 			)
 		);

@@ -23,21 +23,11 @@ final class ProviderTest extends TestCase {
 		$this->assertTrue( $descriptor['is_eligible'] );
 	}
 
-	public function test_config_carries_suggestion_icon_urls(): void {
+	public function test_descriptor_does_not_bundle_undocumented_brand_assets(): void {
 		Provider::register();
 		$out = apply_filters( PaymentProviderRegistry::FILTER, array(), array() );
 
-		// EIP-6963 detection itself is purely client-side, but the
-		// install-suggestion rows show real official-brand SVGs bundled
-		// with the plugin. Their URLs need PHP's `plugins_url()` to
-		// resolve, so the keys (rdns) and URLs ride down via config.
-		$icons = $out[0]['config']['suggestionIcons'];
-		$this->assertArrayHasKey( 'io.metamask', $icons );
-		$this->assertArrayHasKey( 'me.rainbow', $icons );
-		$this->assertArrayHasKey( 'com.coinbase.wallet', $icons );
-		$this->assertStringEndsWith( 'metamask.svg', $icons['io.metamask'] );
-		$this->assertStringEndsWith( 'rainbow.svg', $icons['me.rainbow'] );
-		$this->assertStringEndsWith( 'coinbase-wallet.svg', $icons['com.coinbase.wallet'] );
+		$this->assertArrayNotHasKey( 'config', $out[0] );
 	}
 
 	public function test_script_url_points_at_the_co_located_runtime(): void {
