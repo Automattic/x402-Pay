@@ -53,6 +53,7 @@ final class SettingsRepository {
 	 */
 	public const MAX_FACILITATOR_SLOTS = 50;
 	public const MAX_SLOT_FIELD_BYTES  = 200;
+	private const EVM_ADDRESS_PATTERN  = '/^0x[0-9a-fA-F]{40}$/';
 
 	public const PAYWALL_MODE_NONE      = 'none';
 	public const PAYWALL_MODE_CATEGORY  = 'category';
@@ -87,10 +88,14 @@ final class SettingsRepository {
 	public function resolved_pay_to_address(): string {
 		$id      = $this->selected_facilitator_id();
 		$managed = (string) apply_filters( FacilitatorHooks::MANAGED_POOL_PAY_TO, '', $id );
-		if ( '' !== $managed ) {
+		if ( self::is_valid_evm_address( $managed ) ) {
 			return $managed;
 		}
 		return $this->wallet_address();
+	}
+
+	public static function is_valid_evm_address( mixed $raw ): bool {
+		return 1 === preg_match( self::EVM_ADDRESS_PATTERN, trim( (string) $raw ) );
 	}
 
 	/**
@@ -421,11 +426,16 @@ final class SettingsRepository {
 				continue;
 			}
 			$out[ $clean_id ] = array(
-				'wallet_address' => $this->trim_slot_field( $slot['wallet_address'] ?? '' ),
+				'wallet_address' => $this->sanitize_wallet_address( $slot['wallet_address'] ?? '' ),
 				'api_key_id'     => $this->trim_slot_field( $slot['api_key_id'] ?? '' ),
 			);
 		}
 		return $out;
+	}
+
+	private function sanitize_wallet_address( mixed $raw ): string {
+		$value = trim( (string) $raw );
+		return self::is_valid_evm_address( $value ) ? $value : '';
 	}
 
 	private function trim_slot_field( mixed $raw ): string {
