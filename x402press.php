@@ -1,6 +1,6 @@
 <?php
 /**
- * Plugin Name:       x402 Paywall
+ * Plugin Name:       x402 Pay
  * Description:       Minimal HTTP 402 paywall for bots, API clients, and browser wallets.
  * Version:           0.1.0
  * Requires at least: 7.0

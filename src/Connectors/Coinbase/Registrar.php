@@ -109,7 +109,7 @@ final class Registrar {
 			'description'    => 'Coinbase Developer Platform x402 facilitator on Base mainnet (USDC). Requires a CDP API key.',
 			'type'           => ConnectorRegistry::FACILITATOR_TYPE,
 			'authentication' => array( 'method' => 'api_key' ),
-			'plugin'         => array( 'file' => 'x402-paywall/x402press.php' ),
+			'plugin'         => array( 'file' => 'x402-pay/x402press.php' ),
 		);
 	}
 }

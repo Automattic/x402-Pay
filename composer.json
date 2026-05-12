@@ -1,5 +1,5 @@
 {
-  "name": "automattic/x402-paywall",
+  "name": "automattic/x402-pay",
   "description": "Minimal HTTP 402 paywall for WordPress.",
   "type": "wordpress-plugin",
   "license": "GPL-3.0-or-later",

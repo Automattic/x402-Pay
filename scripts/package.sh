@@ -19,10 +19,10 @@ echo "→ composer install --no-dev (for release)"
 composer install --no-dev --optimize-autoloader --no-progress --quiet
 trap 'echo "→ restoring dev composer install"; composer install --no-progress --quiet >/dev/null' EXIT
 
-zipdest="${REPO_ROOT}/dist/x402-paywall.zip"
+zipdest="${REPO_ROOT}/dist/x402-pay.zip"
 tmp="$(mktemp -d)"
 
-root="${tmp}/x402-paywall"
+root="${tmp}/x402-pay"
 mkdir -p "${root}/assets"
 cp x402press.php "${root}/"
 cp -R src "${root}/"
@@ -39,6 +39,6 @@ cp -R assets/build "${root}/assets/"
 [[ -f LICENSE ]]    && cp LICENSE    "${root}/"
 
 rm -f "${zipdest}"
-( cd "${tmp}" && zip -qr "${zipdest}" x402-paywall -x '*.DS_Store' )
+( cd "${tmp}" && zip -qr "${zipdest}" x402-pay -x '*.DS_Store' )
 rm -rf "${tmp}"
-echo "→ dist/x402-paywall.zip"
+echo "→ dist/x402-pay.zip"
