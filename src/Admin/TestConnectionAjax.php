@@ -9,6 +9,8 @@ declare(strict_types=1);
 
 namespace X402Pay\Admin;
 
+defined( 'ABSPATH' ) || exit;
+
 use X402Pay\Facilitator\FacilitatorResolver;
 
 /**
@@ -37,7 +39,7 @@ final class TestConnectionAjax {
 		check_ajax_referer( self::NONCE, 'nonce' );
 
 		$id = isset( $_POST['connector_id'] )
-			? (string) preg_replace( '/[^a-z0-9_-]/', '', strtolower( (string) wp_unslash( $_POST['connector_id'] ) ) )
+			? sanitize_key( wp_unslash( $_POST['connector_id'] ) )
 			: '';
 		if ( '' === $id ) {
 			wp_send_json_error( array( 'error' => 'missing_connector_id' ), 400 );

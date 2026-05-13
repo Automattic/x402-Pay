@@ -348,7 +348,6 @@ final class SettingsRepository {
 			'orderby'                => 'date',
 			'order'                  => 'ASC',
 			'fields'                 => 'ids',
-			'suppress_filters'       => true,
 			'no_found_rows'          => true,
 			'ignore_sticky_posts'    => true,
 			'update_post_meta_cache' => false,

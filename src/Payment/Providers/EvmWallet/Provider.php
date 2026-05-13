@@ -9,6 +9,8 @@ declare(strict_types=1);
 
 namespace X402Pay\Payment\Providers\EvmWallet;
 
+defined( 'ABSPATH' ) || exit;
+
 use X402Pay\Payment\PaymentProviderRegistry;
 
 /**

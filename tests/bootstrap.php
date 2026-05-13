@@ -358,7 +358,7 @@ if ( ! function_exists( 'home_url' ) ) {
 }
 if ( ! function_exists( 'status_header' ) ) {
 	function status_header( int $code ): void {
-		$GLOBALS['__x402_pay_response']['status'] = $code;
+		$GLOBALS['x402_pay_response']['status'] = $code;
 	}
 }
 if ( ! function_exists( 'nocache_headers' ) ) {
@@ -710,7 +710,7 @@ $GLOBALS['__x402_pay_inserted_terms']  = array();
 $GLOBALS['__x402_pay_settings_errors'] = array();
 $GLOBALS['__x402_pay_enqueued_scripts'] = array();
 $GLOBALS['__x402_pay_localized_data']   = array();
-$GLOBALS['__x402_pay_response'] = array(
+$GLOBALS['x402_pay_response'] = array(
 	'status'  => 200,
 	'headers' => array(),
 	'body'    => null,

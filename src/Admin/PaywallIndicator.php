@@ -9,6 +9,8 @@ declare(strict_types=1);
 
 namespace X402Pay\Admin;
 
+defined( 'ABSPATH' ) || exit;
+
 use X402Pay\Admin\SettingsPage;
 use X402Pay\Services\DefaultPaywallRule;
 use X402Pay\Services\RuleResolver;

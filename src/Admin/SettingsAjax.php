@@ -9,6 +9,8 @@ declare(strict_types=1);
 
 namespace X402Pay\Admin;
 
+defined( 'ABSPATH' ) || exit;
+
 use X402Pay\Connectors\ConnectorRegistry;
 use X402Pay\Services\ConnectorCredentialStore;
 use X402Pay\Settings\SettingsRepository;
@@ -52,9 +54,11 @@ final class SettingsAjax {
 		}
 		check_ajax_referer( self::NONCE, 'nonce' );
 
-		$raw = isset( $_POST['fields'] )
-			? wp_unslash( (string) $_POST['fields'] )
-			: '';
+		// Raw JSON payload — validated structurally by the json_decode + is_array
+		// check below, and each field is sanitized by SettingsRepository::update().
+		// sanitize_text_field would strip the newlines/tabs/`<` that JSON may carry.
+		// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
+		$raw = isset( $_POST['fields'] ) ? wp_unslash( (string) $_POST['fields'] ) : '';
 		if ( strlen( $raw ) > self::MAX_FIELDS_BYTES ) {
 			wp_send_json_error( array( 'error' => 'fields_too_large' ), 413 );
 			return;
