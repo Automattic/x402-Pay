@@ -578,6 +578,7 @@ final class PaywallController {
 
 		return '<div class="x402press-checkout">'
 			. '<div class="x402press-providers">' . $slots . '</div>'
+			. '<p class="x402press-status" id="x402press-status" role="status" aria-live="polite"></p>'
 			. $context_script
 			. $host_script
 			. $script_tags

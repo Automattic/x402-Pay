@@ -18,13 +18,24 @@
 		return;
 	}
 
-	// Network → EVM chainId. Kept tight: only what the plugin actually
-	// supports today. Adding a network on the PHP side without adding
-	// it here surfaces as a clear "Unsupported network" error rather
-	// than a silently-wrong signature.
-	var CHAIN_IDS = {
-		'base': 8453,
-		'base-sepolia': 84532,
+	// EVM networks supported by the x402 facilitator profiles. Kept tight:
+	// adding a network on the PHP side without adding it here surfaces as a
+	// clear "Unsupported network" error rather than a silently-wrong signature.
+	var NETWORKS = {
+		'base': {
+			chainId: 8453,
+			chainName: 'Base',
+			rpcUrls: [ 'https://mainnet.base.org' ],
+			nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 },
+			blockExplorerUrls: [ 'https://basescan.org' ],
+		},
+		'base-sepolia': {
+			chainId: 84532,
+			chainName: 'Base Sepolia',
+			rpcUrls: [ 'https://sepolia.base.org' ],
+			nativeCurrency: { name: 'Sepolia Ether', symbol: 'ETH', decimals: 18 },
+			blockExplorerUrls: [ 'https://sepolia.basescan.org' ],
+		},
 	};
 
 	// Popular wallets we surface as install links when they're NOT
@@ -42,6 +53,71 @@
 	// later. 500ms is comfortably above the 99th-percentile init time
 	// for popular extensions and well below "the page feels slow."
 	var SUGGESTION_DELAY_MS = 500;
+
+	function networkConfigFor( network ) {
+		var config = NETWORKS[ network ];
+		if ( ! config ) {
+			throw new Error( 'Unsupported network: ' + network );
+		}
+		return config;
+	}
+
+	function chainIdHex( chainId ) {
+		return '0x' + Number( chainId ).toString( 16 );
+	}
+
+	function walletErrorCode( error ) {
+		if ( ! error ) return null;
+		if ( error.code ) return error.code;
+		if ( error.data && error.data.originalError && error.data.originalError.code ) {
+			return error.data.originalError.code;
+		}
+		return null;
+	}
+
+	async function ensureWalletChain( provider, requirements, setStatus, walletName ) {
+		var config = networkConfigFor( requirements.network );
+		var targetChainId = chainIdHex( config.chainId );
+
+		try {
+			var activeChainId = await provider.request( { method: 'eth_chainId' } );
+			if (
+				typeof activeChainId === 'string' &&
+				activeChainId.toLowerCase() === targetChainId.toLowerCase()
+			) {
+				return;
+			}
+		} catch ( _ ) {}
+
+		setStatus( 'Switch ' + walletName + ' to ' + config.chainName + '…' );
+		try {
+			await provider.request( {
+				method: 'wallet_switchEthereumChain',
+				params: [ { chainId: targetChainId } ],
+			} );
+		} catch ( e ) {
+			if ( 4902 !== walletErrorCode( e ) ) {
+				throw e;
+			}
+			setStatus( 'Add ' + config.chainName + ' to ' + walletName + '…' );
+			await provider.request( {
+				method: 'wallet_addEthereumChain',
+				params: [
+					{
+						chainId: targetChainId,
+						chainName: config.chainName,
+						nativeCurrency: config.nativeCurrency,
+						rpcUrls: config.rpcUrls,
+						blockExplorerUrls: config.blockExplorerUrls,
+					},
+				],
+			} );
+			await provider.request( {
+				method: 'wallet_switchEthereumChain',
+				params: [ { chainId: targetChainId } ],
+			} );
+		}
+	}
 
 	function randomNonce32() {
 		var arr = new Uint8Array( 32 );
@@ -61,10 +137,7 @@
 	 */
 	function buildTypedData( requirements, fromAddress ) {
 		var network = requirements.network;
-		var chainId = CHAIN_IDS[ network ];
-		if ( ! chainId ) {
-			throw new Error( 'Unsupported network: ' + network );
-		}
+		var chainId = networkConfigFor( network ).chainId;
 		var extra      = requirements.extra || {};
 		var domainName = extra.name;
 		var version    = extra.version;
@@ -157,6 +230,13 @@
 					throw new Error( 'no account returned' );
 				}
 
+				await ensureWalletChain(
+					provider,
+					host.requirements,
+					host.setStatus,
+					info.name || 'your wallet'
+				);
+
 				host.setStatus( 'Sign the payment in ' + ( info.name || 'your wallet' ) + '…' );
 				var built = buildTypedData( host.requirements, from );
 
@@ -173,9 +253,11 @@
 					},
 				} );
 			} catch ( e ) {
-				host.setStatus(
-					'Payment cancelled: ' + ( ( e && e.message ) || 'unknown error' )
-				);
+				var code = walletErrorCode( e );
+				var message = ( 4001 === code )
+					? 'wallet request was rejected'
+					: ( ( e && e.message ) || 'unknown error' );
+				host.setStatus( 'Payment cancelled: ' + message );
 				button.disabled = false;
 			}
 		}

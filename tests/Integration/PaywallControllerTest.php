@@ -1061,6 +1061,7 @@ final class PaywallControllerTest extends TestCase {
 
 		$html = (string) $GLOBALS['__x402press_response']['body'];
 		$this->assertStringContainsString( 'data-x402press-provider="good_id"', $html );
+		$this->assertStringContainsString( 'id="x402press-status" role="status" aria-live="polite"', $html );
 		$this->assertStringNotContainsString( 'bad&quot;&gt;&lt;script&gt;', $html );
 		$this->assertStringNotContainsString( '<tag>', $html );
 		$this->assertStringContainsString( '\u003Ctag\u003E\u0026\u0022\u0027', $html );
