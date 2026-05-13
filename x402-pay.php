@@ -1,7 +1,7 @@
 <?php
 /**
  * Plugin Name:       x402 Pay
- * Description:       Minimal HTTP 402 paywall for bots, API clients, and browser wallets.
+ * Description:       A USDC paywall for AI crawlers and bots: return HTTP 402, accept a signed micropayment, then serve the content.
  * Version:           0.1.0
  * Requires at least: 7.0
  * Requires PHP:      8.1

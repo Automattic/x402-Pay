@@ -8,7 +8,7 @@ Stable tag: 0.1.0
 License: GPLv3 or later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 
-Minimal HTTP 402 paywall for bots, API clients, and browser wallets. Clients pay in USDC and retry.
+A USDC paywall for AI crawlers and bots: return HTTP 402, accept a signed micropayment, then serve the content.
 
 == Description ==
 
