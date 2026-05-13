@@ -114,6 +114,23 @@
 		return { typedData: typedData, authorization: authorization };
 	}
 
+	function sanitizeIconSrc( src ) {
+		if ( typeof src !== 'string' ) return '';
+		var value = src.trim();
+		if ( ! value ) return '';
+		if ( /[\u0000-\u001f\u007f<>]/.test( value ) ) return '';
+		try {
+			var parsed = new URL( value, document.baseURI );
+			if ( parsed.protocol === 'https:' || parsed.protocol === 'http:' ) {
+				return parsed.href;
+			}
+		} catch ( _ ) {}
+		if ( /^data:image\/(?:png|gif|jpe?g|webp|svg\+xml);/i.test( value ) ) {
+			return value;
+		}
+		return '';
+	}
+
 	window.x402press.registerProvider( 'evm-wallet', function ( host ) {
 		// Wallets keyed by `rdns` (reverse-DNS identifier — stable across
 		// versions, unique per extension). Lets multiple installs of the
@@ -180,9 +197,10 @@
 			var iconSpan = document.createElement( 'span' );
 			iconSpan.className = 'x402press-pay-icon';
 			iconSpan.setAttribute( 'aria-hidden', 'true' );
-			if ( typeof info.icon === 'string' && info.icon ) {
+			var iconSrc = sanitizeIconSrc( info.icon );
+			if ( iconSrc ) {
 				var img = document.createElement( 'img' );
-				img.src = info.icon;
+				img.src = iconSrc;
 				img.alt = '';
 				iconSpan.appendChild( img );
 			}
@@ -235,9 +253,17 @@
 				link.target = '_blank';
 				link.rel = 'noopener noreferrer';
 
-				link.innerHTML = ''
-					+ '<span class="x402press-pay-label">Install ' + w.name + '</span>'
-					+ '<span class="x402press-pay-meta" aria-hidden="true">↗</span>';
+				var label = document.createElement( 'span' );
+				label.className = 'x402press-pay-label';
+				label.textContent = 'Install ' + w.name;
+				link.appendChild( label );
+
+				var meta = document.createElement( 'span' );
+				meta.className = 'x402press-pay-meta';
+				meta.setAttribute( 'aria-hidden', 'true' );
+				meta.textContent = '↗';
+				link.appendChild( meta );
+
 				host.container.appendChild( link );
 			} );
 		}

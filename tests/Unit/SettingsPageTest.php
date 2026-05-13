@@ -17,6 +17,7 @@ final class SettingsPageTest extends TestCase {
 		$GLOBALS['__x402press_enqueued_styles']     = array();
 		$GLOBALS['__x402press_localized_data']      = array();
 		$GLOBALS['__x402press_connectors']          = array();
+		$GLOBALS['__x402press_filters']             = array();
 		$GLOBALS['__x402press_existing_terms']      = array(
 			array( 'term_id' => 1, 'name' => 'x402paywall', 'taxonomy' => 'category' ),
 			array( 'term_id' => 2, 'name' => 'News', 'taxonomy' => 'category' ),
@@ -115,7 +116,7 @@ final class SettingsPageTest extends TestCase {
 		$this->assertSame( 'x402press_test', $boot['values']['selected_facilitator_id'] );
 		$this->assertSame(
 			array(
-				'wallet_address' => '0xabc',
+				'wallet_address' => '',
 				'api_key_id'     => '',
 			),
 			$boot['values']['facilitators']['x402press_test']
@@ -148,5 +149,43 @@ final class SettingsPageTest extends TestCase {
 		$this->assertArrayHasKey( 'paywallProbe', $boot );
 		$this->assertSame( 'x402press_paywall_probe', $boot['paywallProbe']['action'] );
 		$this->assertNotSame( '', $boot['paywallProbe']['nonce'] );
+	}
+
+	public function test_bootstrap_data_sanitizes_connector_admin_meta(): void {
+		$GLOBALS['__x402press_connectors']['coinbase_cdp'] = array(
+			'type'           => ConnectorRegistry::FACILITATOR_TYPE,
+			'name'           => '<b>Coinbase</b>',
+			'description'    => '<script>alert(1)</script>CDP',
+			'authentication' => array( 'method' => 'api_key' ),
+		);
+		add_filter(
+			'x402press_connector_admin_meta',
+			static fn ( array $meta, string $id ): array => 'coinbase_cdp' === $id
+				? array(
+					'introHeadline'       => '<b>Connect</b>',
+					'introBody'           => 'Read the <docs/> <script>alert(1)</script>',
+					'docsLinkText'        => '<b>docs</b>',
+					'docsUrl'             => 'javascript:alert(1)',
+					'keyIdPattern'        => '^[a-z]+$',
+					'keySecretPattern'    => '^[A-Za-z0-9]+$',
+					'keySecretPlaceholder' => '<i>paste</i>',
+				)
+				: $meta,
+			10,
+			2
+		);
+
+		$boot = ( new SettingsPage( new SettingsRepository() ) )->bootstrap_data();
+
+		$this->assertSame( 'Coinbase', $boot['facilitators'][0]['name'] );
+		$this->assertSame( 'alert(1)CDP', $boot['facilitators'][0]['description'] );
+
+		$meta = $boot['connectorAdminMeta']['coinbase_cdp'];
+		$this->assertSame( 'Connect', $meta['introHeadline'] );
+		$this->assertSame( 'Read the <docs/> alert(1)', $meta['introBody'] );
+		$this->assertSame( 'docs', $meta['docsLinkText'] );
+		$this->assertSame( '', $meta['docsUrl'] );
+		$this->assertSame( '^[a-z]+$', $meta['keyIdPattern'] );
+		$this->assertSame( 'paste', $meta['keySecretPlaceholder'] );
 	}
 }
