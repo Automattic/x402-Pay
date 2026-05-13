@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Smoke-test client for x402press. Pays for a paywalled URL on Base Sepolia.
+// Smoke-test client for x402 Pay. Pays for a paywalled URL on Base Sepolia.
 //
 // Usage: PRIVATE_KEY=0x... node pay.mjs <url>
 //

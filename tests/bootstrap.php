@@ -4,7 +4,7 @@ declare(strict_types=1);
 require_once __DIR__ . '/../vendor/autoload.php';
 
 if ( ! defined( 'X402PRESS_FILE' ) ) {
-	define( 'X402PRESS_FILE', __DIR__ . '/../x402press.php' );
+	define( 'X402PRESS_FILE', __DIR__ . '/../x402-pay.php' );
 }
 if ( ! defined( 'X402PRESS_VERSION' ) ) {
 	define( 'X402PRESS_VERSION', '0.0.0-test' );
@@ -492,7 +492,7 @@ if ( ! function_exists( 'disabled' ) ) {
 }
 if ( ! function_exists( 'plugins_url' ) ) {
 	function plugins_url( string $path = '', string $plugin = '' ): string {
-		return 'https://example.test/wp-content/plugins/x402press/' . ltrim( $path, '/' );
+		return 'https://example.test/wp-content/plugins/x402-pay/' . ltrim( $path, '/' );
 	}
 }
 if ( ! function_exists( 'wp_enqueue_script' ) ) {

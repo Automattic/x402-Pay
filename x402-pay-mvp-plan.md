@@ -57,7 +57,7 @@ The plugin registers one default callback at priority 10 that returns a rule iff
 
 ```
 x402press/
-├── x402press.php                      # plugin header, boot
+├── x402-pay.php                      # plugin header, boot
 ├── composer.json
 ├── phpunit.xml.dist
 ├── phpcs.xml.dist
@@ -97,7 +97,7 @@ One responsibility per file. `Plugin` is the only place that news up objects and
 ## Task 1: Repository scaffold
 
 **Files:**
-- Create: `x402press.php`
+- Create: `x402-pay.php`
 - Create: `composer.json`
 - Create: `phpunit.xml.dist`
 - Create: `phpcs.xml.dist`
@@ -105,7 +105,7 @@ One responsibility per file. `Plugin` is the only place that news up objects and
 - Create: `README.md`
 - Create: `.gitignore`
 
-- [ ] **Step 1: Create `x402press.php`**
+- [ ] **Step 1: Create `x402-pay.php`**
 
 ```php
 <?php
@@ -202,7 +202,7 @@ register_activation_hook(__FILE__, [\X402Press\Plugin::class, 'activate']);
 <?xml version="1.0"?>
 <ruleset name="x402press">
     <description>Coding standards for the x402press plugin.</description>
-    <file>x402press.php</file>
+    <file>x402-pay.php</file>
     <file>src</file>
     <arg name="extensions" value="php"/>
     <arg name="colors"/>
@@ -1660,7 +1660,7 @@ Expected: no errors.
 - [ ] **Step 3: Commit**
 
 ```bash
-git add src/Plugin.php x402press.php
+git add src/Plugin.php x402-pay.php
 git commit -m "feat: wire Plugin bootstrap to template_redirect"
 ```
 

@@ -14,7 +14,7 @@ use X402Press\Services\ConnectorCredentialStore;
 use X402Press\Settings\SettingsRepository;
 
 /**
- * Powers the React Settings → x402press per-card "Save changes" buttons.
+ * Powers the React Settings → x402 Pay per-card "Save changes" buttons.
  *
  * Registered on `wp_ajax_x402press_save_settings`. Admin-only,
  * nonce-checked. Accepts a partial `fields` payload and forwards it to

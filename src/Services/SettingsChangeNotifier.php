@@ -28,7 +28,7 @@ final class SettingsChangeNotifier {
 			'warning',
 			sprintf(
 				/* translators: %s: deleted paywall category name. */
-				__( 'The paywall category "%s" was deleted. x402 Pay has switched to the default paywall category so gating keeps working; update your paywall category in Settings → x402 Pay if you want a different one.', 'x402press' ),
+				__( 'The paywall category "%s" was deleted. x402 Pay has switched to the default paywall category so gating keeps working; update your paywall category in Settings → x402 Pay if you want a different one.', 'x402-pay' ),
 				$name
 			)
 		);
@@ -41,7 +41,7 @@ final class SettingsChangeNotifier {
 		$this->emit(
 			'x402press_all_posts_mode',
 			'info',
-			__( 'Every published post is now paywalled.', 'x402press' )
+			__( 'Every published post is now paywalled.', 'x402-pay' )
 		);
 	}
 

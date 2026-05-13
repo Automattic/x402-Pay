@@ -1,6 +1,6 @@
 <?php
 /**
- * Admin: Settings → x402press page.
+ * Admin: Settings → x402 Pay page.
  *
  * @package X402Press
  */
@@ -18,7 +18,7 @@ use X402Press\Services\FacilitatorHooks;
 use X402Press\Settings\SettingsRepository;
 
 /**
- * Settings → x402press admin page.
+ * Settings → x402 Pay admin page.
  *
  * Renders a mount point + JSON bootstrap; the React app in
  * assets/build/admin/index.js handles the form UI. Form submission still
@@ -27,7 +27,7 @@ use X402Press\Settings\SettingsRepository;
  */
 final class SettingsPage {
 
-	public const MENU_SLUG     = 'x402press';
+	public const MENU_SLUG     = 'x402-pay';
 	public const GROUP         = 'x402press_settings_group';
 	public const SCRIPT_HANDLE = 'x402press-admin';
 
@@ -106,8 +106,8 @@ final class SettingsPage {
 	 */
 	public function add_menu(): void {
 		add_options_page(
-			__( 'x402 Pay', 'x402press' ),
-			__( 'x402 Pay', 'x402press' ),
+			__( 'x402 Pay', 'x402-pay' ),
+			__( 'x402 Pay', 'x402-pay' ),
 			'manage_options',
 			self::MENU_SLUG,
 			array( $this, 'render' )
@@ -140,13 +140,13 @@ final class SettingsPage {
 		<div class="wrap">
 			<header class="x402press-page__header">
 				<h1 class="x402press-page__header-title">
-					<?php esc_html_e( 'x402 Pay', 'x402press' ); ?>
+					<?php esc_html_e( 'x402 Pay', 'x402-pay' ); ?>
 				</h1>
 				<p class="x402press-page__header-subtitle">
 					<?php
 					esc_html_e(
 						'Configure how the x402 paywall protects your content and where payments go.',
-						'x402press'
+						'x402-pay'
 					);
 					?>
 				</p>
