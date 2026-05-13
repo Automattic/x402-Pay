@@ -245,6 +245,16 @@
 					params: [ from, JSON.stringify( built.typedData ) ],
 				} );
 
+				// EIP-1193 says rejection throws, but guard the happy path too:
+				// some wallets resolve with null/empty on cancel. A valid
+				// EIP-712 signature is "0x" + 130 hex chars (r + s + v).
+				if (
+					typeof signature !== 'string' ||
+					! /^0x[0-9a-fA-F]{130}$/.test( signature )
+				) {
+					throw new Error( 'wallet did not return a valid signature' );
+				}
+
 				await host.retry( {
 					scheme: 'exact',
 					payload: {
