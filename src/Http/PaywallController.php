@@ -548,7 +548,10 @@ final class PaywallController {
 		$script_tags    = '';
 		$seen_providers = array();
 		foreach ( $providers as $provider ) {
-			$id = $provider['id'];
+			$id = $this->sanitize_provider_id( (string) ( $provider['id'] ?? '' ) );
+			if ( '' === $id ) {
+				continue;
+			}
 			if ( isset( $seen_providers[ $id ] ) ) {
 				continue;
 			}
@@ -563,7 +566,7 @@ final class PaywallController {
 
 		$context_json = wp_json_encode(
 			$context,
-			JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_HEX_TAG
+			JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT
 		);
 		if ( false === $context_json ) {
 			return '';
@@ -579,6 +582,11 @@ final class PaywallController {
 			. $host_script
 			. $script_tags
 			. '</div>';
+	}
+
+	private function sanitize_provider_id( string $id ): string {
+		$id = strtolower( trim( $id ) );
+		return 1 === preg_match( '/^[a-z0-9_-]+$/', $id ) ? $id : '';
 	}
 
 	private function html_402_styles(): string {

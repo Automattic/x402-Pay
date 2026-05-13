@@ -7,6 +7,7 @@ use PHPUnit\Framework\TestCase;
 use X402Press\Connectors\ConnectorRegistry;
 use X402Press\Facilitator\FacilitatorResolver;
 use X402Press\Http\PaywallController;
+use X402Press\Payment\PaymentProviderRegistry;
 use X402Press\Services\FacilitatorHooks;
 use X402Press\Services\FacilitatorProfile;
 use X402Press\Services\GrantStore;
@@ -1013,6 +1014,56 @@ final class PaywallControllerTest extends TestCase {
 		// Empty site name + missing icon → no identity row at all, rather
 		// than an empty placeholder.
 		$this->assertStringNotContainsString( 'class="x402press-site"', $html );
+	}
+
+	public function test_html_402_sanitizes_payment_provider_slots_and_context_json(): void {
+		add_filter( 'x402press_rule_for_request', static fn () => array( 'price' => '0.01' ), 10, 2 );
+		add_filter(
+			PaymentProviderRegistry::FILTER,
+			static fn ( array $providers ): array => array_merge(
+				$providers,
+				array(
+					array(
+						'id'          => 'bad"><script>',
+						'label'       => 'Bad',
+						'script_url'  => 'https://example.test/bad.js',
+						'is_eligible' => true,
+					),
+					array(
+						'id'          => 'Good_ID',
+						'label'       => 'Good',
+						'script_url'  => 'https://example.test/provider.js?x=<bad>&q="',
+						'is_eligible' => true,
+						'config'      => array(
+							'label' => '<tag>&"\'',
+						),
+					),
+				)
+			),
+			10,
+			2
+		);
+		$human_ua = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36';
+
+		$this->controller()->handle(
+			array(
+				'path'    => '/providers',
+				'method'  => 'GET',
+				'post_id' => 0,
+				'headers' => array(
+					'User-Agent'     => $human_ua,
+					'Accept'         => 'text/html',
+					'Sec-Fetch-Mode' => 'navigate',
+					'Sec-Fetch-Dest' => 'document',
+				),
+			)
+		);
+
+		$html = (string) $GLOBALS['__x402press_response']['body'];
+		$this->assertStringContainsString( 'data-x402press-provider="good_id"', $html );
+		$this->assertStringNotContainsString( 'bad&quot;&gt;&lt;script&gt;', $html );
+		$this->assertStringNotContainsString( '<tag>', $html );
+		$this->assertStringContainsString( '\u003Ctag\u003E\u0026\u0022\u0027', $html );
 	}
 
 	public function test_everyone_audience_human_json_accept_serves_json_402(): void {

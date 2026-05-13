@@ -174,26 +174,34 @@ final class SettingsPage {
 		$categories = array_map(
 			static fn ( $term ): array => array(
 				'term_id' => (int) $term->term_id,
-				'name'    => (string) $term->name,
+				'name'    => sanitize_text_field( (string) $term->name ),
 			),
 			$terms
 		);
 
-		$facilitators = array_map(
-			static fn ( string $id, array $c ): array => array(
+		$connectors   = $this->connectors->facilitators();
+		$facilitators = array();
+		foreach ( $connectors as $id => $connector ) {
+			$id = self::sanitize_connector_id( (string) $id );
+			if ( '' === $id || ! is_array( $connector ) ) {
+				continue;
+			}
+			$facilitators[] = array(
 				'id'          => $id,
-				'name'        => (string) ( $c['name'] ?? $id ),
-				'description' => (string) ( $c['description'] ?? '' ),
-			),
-			array_keys( $this->connectors->facilitators() ),
-			array_values( $this->connectors->facilitators() )
-		);
+				'name'        => sanitize_text_field( (string) ( $connector['name'] ?? $id ) ),
+				'description' => sanitize_text_field( (string) ( $connector['description'] ?? '' ) ),
+			);
+		}
 
 		$managed_wallet_facilitators = array();
 		$api_key_facilitators        = array();
 		$connector_credentials       = array();
 		$connector_admin_meta        = array();
-		foreach ( $this->connectors->facilitators() as $fid => $connector ) {
+		foreach ( $connectors as $fid => $connector ) {
+			$fid = self::sanitize_connector_id( (string) $fid );
+			if ( '' === $fid ) {
+				continue;
+			}
 			if ( '' !== (string) apply_filters( FacilitatorHooks::MANAGED_POOL_PAY_TO, '', $fid ) ) {
 				$managed_wallet_facilitators[] = $fid;
 			}
@@ -203,7 +211,7 @@ final class SettingsPage {
 				$connector_credentials[ $fid ] = $this->credentials->status( $fid );
 				$meta                          = apply_filters( FacilitatorHooks::CONNECTOR_ADMIN_META, array(), $fid );
 				if ( is_array( $meta ) && array() !== $meta ) {
-					$connector_admin_meta[ $fid ] = $meta;
+					$connector_admin_meta[ $fid ] = self::sanitize_connector_admin_meta( $meta );
 				}
 			}
 		}
@@ -250,5 +258,58 @@ final class SettingsPage {
 				'default_price'            => $this->settings->default_price(),
 			),
 		);
+	}
+
+	private static function sanitize_connector_id( string $id ): string {
+		return (string) preg_replace( '/[^a-z0-9_-]/', '', strtolower( $id ) );
+	}
+
+	/**
+	 * Keep connector-supplied admin UI metadata to plain text and safe URLs
+	 * before it crosses into the React bootstrap payload.
+	 *
+	 * @param array<string,mixed> $meta
+	 * @return array<string,string>
+	 */
+	private static function sanitize_connector_admin_meta( array $meta ): array {
+		$text_keys = array(
+			'introHeadline',
+			'introBody',
+			'docsLinkText',
+			'keyIdPlaceholder',
+			'keyIdPattern',
+			'keyIdInvalidMessage',
+			'keySecretPlaceholder',
+			'keySecretPattern',
+			'keySecretInvalidMessage',
+		);
+		$out       = array();
+		foreach ( $text_keys as $key ) {
+			if ( isset( $meta[ $key ] ) && is_scalar( $meta[ $key ] ) ) {
+				$out[ $key ] = 'introBody' === $key
+					? self::sanitize_interpolated_text( (string) $meta[ $key ] )
+					: sanitize_text_field( (string) $meta[ $key ] );
+			}
+		}
+		if ( isset( $meta['docsUrl'] ) && is_scalar( $meta['docsUrl'] ) ) {
+			$out['docsUrl'] = self::sanitize_http_url( (string) $meta['docsUrl'] );
+		}
+		return $out;
+	}
+
+	private static function sanitize_interpolated_text( string $text ): string {
+		$token = '__X402PRESS_DOCS_PLACEHOLDER__';
+		$text  = str_replace( '<docs/>', $token, $text );
+		$text  = sanitize_text_field( $text );
+		return str_replace( $token, '<docs/>', $text );
+	}
+
+	private static function sanitize_http_url( string $url ): string {
+		$url    = trim( $url );
+		$scheme = strtolower( (string) wp_parse_url( $url, PHP_URL_SCHEME ) );
+		if ( ! in_array( $scheme, array( 'http', 'https' ), true ) ) {
+			return '';
+		}
+		return esc_url_raw( $url );
 	}
 }

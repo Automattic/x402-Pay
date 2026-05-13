@@ -30,6 +30,35 @@ final class SettingsRepositoryTest extends TestCase {
 		$this->assertSame( array(), $repo->facilitator_slots() );
 	}
 
+	public function test_getters_resanitise_direct_option_writes(): void {
+		$GLOBALS['__x402press_options'][ SettingsRepository::OPTION_NAME ] = array(
+			'default_price'            => '<script>alert(1)</script>',
+			'selected_facilitator_id'  => 'Bad/Connector<script>',
+			'facilitators'             => array(
+				'Bad Slot!' => array(
+					'wallet_address' => 'javascript:alert(1)',
+					'api_key_id'     => str_repeat( 'x', SettingsRepository::MAX_SLOT_FIELD_BYTES + 5 ),
+				),
+			),
+			'paywall_mode'             => '<b>all-posts</b>',
+			'paywall_audience'         => 'nobody',
+			'paywall_category_term_id' => -99,
+		);
+
+		$repo = new SettingsRepository();
+
+		$this->assertSame( SettingsRepository::DEFAULT_PRICE, $repo->default_price() );
+		$this->assertSame( 'badconnectorscript', $repo->selected_facilitator_id() );
+		$this->assertSame( SettingsRepository::DEFAULT_PAYWALL_MODE, $repo->paywall_mode() );
+		$this->assertSame( SettingsRepository::DEFAULT_AUDIENCE, $repo->paywall_audience() );
+		$this->assertSame( 0, $repo->paywall_category_term_id() );
+
+		$slots = $repo->facilitator_slots();
+		$this->assertArrayHasKey( 'badslot', $slots );
+		$this->assertSame( '', $slots['badslot']['wallet_address'] );
+		$this->assertSame( SettingsRepository::MAX_SLOT_FIELD_BYTES, strlen( $slots['badslot']['api_key_id'] ) );
+	}
+
 	public function test_wallet_address_resolves_to_the_active_facilitators_slot(): void {
 		$GLOBALS['__x402press_existing_terms'] = array(
 			array( 'term_id' => 7, 'name' => 'Premium', 'taxonomy' => 'category' ),
@@ -189,6 +218,22 @@ final class SettingsRepositoryTest extends TestCase {
 		$this->assertSame( 'category', $merged['paywall_mode'] );
 		$this->assertSame( 'bots', $merged['paywall_audience'] );
 		$this->assertSame( 3, $merged['paywall_category_term_id'] );
+	}
+
+	public function test_update_resanitises_untouched_stored_fields_before_returning(): void {
+		$GLOBALS['__x402press_options'][ SettingsRepository::OPTION_NAME ] = array(
+			'default_price'           => 'free',
+			'selected_facilitator_id' => 'Bad/Connector',
+			'paywall_mode'            => 'weird',
+			'paywall_audience'        => 'nobody',
+		);
+
+		$merged = ( new SettingsRepository() )->update( array( 'default_price' => '0.25' ) );
+
+		$this->assertSame( '0.25', $merged['default_price'] );
+		$this->assertSame( 'badconnector', $merged['selected_facilitator_id'] );
+		$this->assertSame( SettingsRepository::DEFAULT_PAYWALL_MODE, $merged['paywall_mode'] );
+		$this->assertSame( SettingsRepository::DEFAULT_AUDIENCE, $merged['paywall_audience'] );
 	}
 
 	public function test_update_resanitises_existing_slots_so_historical_junk_is_dropped(): void {
