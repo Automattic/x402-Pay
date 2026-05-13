@@ -355,6 +355,9 @@ final class PaywallController {
 			: '';
 
 		$providers_block = $this->payment_providers_block( $request, $requirements );
+		$fund_hint       = '' !== $providers_block
+			? $this->build_fund_hint( $requirements )
+			: '';
 		$hint_line       = '' !== $providers_block
 			? '' // The CTA replaces the developer-facing hint.
 			: '<p class="x402-pay-hint">'
@@ -391,6 +394,7 @@ final class PaywallController {
 			. '</div>'
 			. $price_block
 			. $providers_block
+			. $fund_hint
 			. $hint_line
 			. $error_line
 			. '</main></body></html>';
@@ -495,6 +499,36 @@ final class PaywallController {
 			_n( 'Access for %d day', 'Access for %d days', $days, 'x402-pay' ),
 			$days
 		);
+	}
+
+	/**
+	 * Render the funding hint that sits under the pay buttons. Asset and
+	 * network labels are read from the live PaymentRequirements so the copy
+	 * adapts to whichever facilitator is selected.
+	 *
+	 * @param array<string,mixed> $requirements
+	 */
+	private function build_fund_hint( array $requirements ): string {
+		$asset_label   = trim( (string) ( $requirements['extra']['name'] ?? '' ) );
+		$network_slug  = trim( (string) ( $requirements['network'] ?? '' ) );
+		$network_label = '' !== $network_slug
+			? ucwords( str_replace( '-', ' ', $network_slug ) )
+			: '';
+
+		if ( '' === $asset_label || '' === $network_label ) {
+			return '';
+		}
+
+		return '<p class="x402-pay-hint">'
+			. esc_html(
+				sprintf(
+					/* translators: 1: token name (e.g. USDC). 2: network name (e.g. Base, Base Sepolia). */
+					__( "You'll need %1\$s on %2\$s to pay. Most wallets let you buy it in-app, or you can transfer it in from an exchange.", 'x402-pay' ),
+					$asset_label,
+					$network_label
+				)
+			)
+			. '</p>';
 	}
 
 	/**
