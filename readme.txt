@@ -83,6 +83,12 @@ No. x402 uses EIP-3009 `transferWithAuthorization`; the facilitator pays gas. Yo
 
 Coinbase CDP secrets are stored in their own `wp_options` row, or can be supplied via a `wp-config.php` constant or environment variable so they stay out of the database entirely.
 
+== Development ==
+
+Source, build instructions, and issue tracker: https://github.com/Automattic/x402-pay
+
+The admin UI is built from `assets/src/index.jsx` via `npm run build`; the bundled `assets/build/index.js` is the compiled output.
+
 == Screenshots ==
 
 1. Choose paywall scope, audience, and price from a single Settings page.
