@@ -79,9 +79,9 @@ Publishing a facilitator is a two-step contract:
     } );
     ```
 
-2. **Provide the client** through the `x402press_facilitator_for_connector` filter (planned — not yet wired). Since core strips unknown fields from the registration payload, x402-specific capabilities (endpoint URL, supported networks, fee-split support) are delivered here, not in the registration array. Returning a `Facilitator` instance for your connector ID is how the plugin learns how to call your backend.
+2. **Provide the client** through the `x402press_facilitator_for_connector` filter. Since core strips unknown fields from the registration payload, x402-specific capabilities (endpoint URL, supported networks, fee-split support) are delivered here, not in the registration array. Returning a `Facilitator` instance for your connector ID is how the plugin learns how to call your backend.
 
-### Built-in x402.org connector
+### Built-in connectors
 
 x402 Pay ships with two connectors out of the box: `x402press_test`, which routes through the public x402.org facilitator on Base Sepolia for testnet trials, and `coinbase_cdp`, which routes through Coinbase Developer Platform on Base mainnet (requires a CDP Secret API Key). Site owners pick one from the Facilitator dropdown in Settings → x402 Pay and enter a receiving wallet + price.
 
@@ -93,10 +93,6 @@ The plugin talks to two external facilitator endpoints, and only when a request 
 
 - **x402.org (Test network)** — `https://x402.org/facilitator/`. Default for new installs. Sends PaymentRequirements (receiving wallet, amount, asset, network, resource URL) and the paying client's PaymentPayload. Public testnet only — not for production.
 - **Coinbase Developer Platform** — `https://api.cdp.coinbase.com/platform/v2/x402/`. Active only when an admin selects the Coinbase CDP connector. Sends the same payload plus a CDP-signed JWT. [Terms](https://www.coinbase.com/legal/cloud) · [Privacy](https://www.coinbase.com/legal/privacy).
-
-## Suggested improvements
-
-- **Search-engine bots** — Today, detected crawlers get the same JSON 402 as other clients, which may hurt indexing. Consider treating verified search bots differently, e.g. returning `200` with a short excerpt, summary, or `meta description` in the body instead of a bare 402 (policy and implementation TBD).
 
 ## Changelog
 
