@@ -81,7 +81,7 @@ final class PaywallIndicator {
 				'meta'  => array(
 					'title' => esc_attr__(
 						'This post is in your paywall scope. Open x402 Pay settings for audience, mode, and price.',
-						'x402press'
+						'x402-pay'
 					),
 				),
 			)
@@ -97,7 +97,7 @@ final class PaywallIndicator {
 			return esc_html(
 				sprintf(
 					/* translators: %s: decimal USDC amount (e.g. 0.01). */
-					__( 'Paywalled (bots only, $%s)', 'x402press' ),
+					__( 'Paywalled (bots only, $%s)', 'x402-pay' ),
 					$price
 				)
 			);
@@ -105,7 +105,7 @@ final class PaywallIndicator {
 		return esc_html(
 			sprintf(
 				/* translators: %s: decimal USDC amount (e.g. 0.01). */
-				__( 'Paywalled (everyone, $%s)', 'x402press' ),
+				__( 'Paywalled (everyone, $%s)', 'x402-pay' ),
 				$price
 			)
 		);

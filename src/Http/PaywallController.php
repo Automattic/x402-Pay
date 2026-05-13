@@ -105,7 +105,7 @@ final class PaywallController {
 	/**
 	 * Resolve the active Facilitator from the selected connector, or null if
 	 * none selected / resolution failed. The paywall is inert when there is
-	 * no facilitator — pick one in Settings → x402press to activate it.
+	 * no facilitator — pick one in Settings → x402 Pay to activate it.
 	 */
 	private function facilitator(): ?Facilitator {
 		if ( null !== $this->facilitator_svc ) {
@@ -358,7 +358,7 @@ final class PaywallController {
 		$hint_line       = '' !== $providers_block
 			? '' // The CTA replaces the developer-facing hint.
 			: '<p class="x402press-hint">'
-				. esc_html__( 'x402 payment instructions are in the JSON response body (the spec-standard 402 envelope).', 'x402press' )
+				. esc_html__( 'x402 payment instructions are in the JSON response body (the spec-standard 402 envelope).', 'x402-pay' )
 				. '</p>';
 
 		$price_block = '<div class="x402press-price-card">'
@@ -368,7 +368,7 @@ final class PaywallController {
 			. '<span class="x402press-price-amount">'
 			. esc_html(
 				/* translators: %s: USDC price (decimal string). */
-				sprintf( __( '%s USDC', 'x402press' ), $price )
+				sprintf( __( '%s USDC', 'x402-pay' ), $price )
 			)
 			. '</span>'
 			. '</div>';
@@ -377,14 +377,14 @@ final class PaywallController {
 			. '<meta name="viewport" content="width=device-width, initial-scale=1">'
 			. '<meta name="robots" content="noindex">'
 			. '<title>'
-			. esc_html__( 'Payment required', 'x402press' )
+			. esc_html__( 'Payment required', 'x402-pay' )
 			. '</title>'
 			. $this->html_402_styles()
 			. '</head><body><main class="x402press-card">'
 			. $site_block
 			. '<div class="x402press-headline">'
 			. '<p class="x402press-eyebrow">'
-			. esc_html__( 'Payment required', 'x402press' )
+			. esc_html__( 'Payment required', 'x402-pay' )
 			. '</p>'
 			. $title_block
 			. $excerpt_block
@@ -442,20 +442,20 @@ final class PaywallController {
 			case 'invalid_signature_header':
 				return __(
 					'The payment data sent by your wallet was invalid. Try again.',
-					'x402press'
+					'x402-pay'
 				);
 			case 'verify_failed':
 				return __(
 					'Your payment couldn’t be verified. Check your wallet and try again.',
-					'x402press'
+					'x402-pay'
 				);
 			case 'settle_failed':
 				return __(
 					'Your payment couldn’t be settled on-chain. Try again in a moment.',
-					'x402press'
+					'x402-pay'
 				);
 			default:
-				return __( 'Something went wrong with the payment. Try again.', 'x402press' );
+				return __( 'Something went wrong with the payment. Try again.', 'x402-pay' );
 		}
 	}
 
@@ -471,13 +471,13 @@ final class PaywallController {
 	 */
 	private function access_duration_label( int $ttl_seconds ): string {
 		if ( $ttl_seconds <= 0 ) {
-			return __( 'Access', 'x402press' );
+			return __( 'Access', 'x402-pay' );
 		}
 		if ( $ttl_seconds < HOUR_IN_SECONDS ) {
 			$minutes = max( 1, (int) round( $ttl_seconds / MINUTE_IN_SECONDS ) );
 			return sprintf(
 				/* translators: %d: number of minutes the grant is valid for. */
-				_n( 'Access for %d minute', 'Access for %d minutes', $minutes, 'x402press' ),
+				_n( 'Access for %d minute', 'Access for %d minutes', $minutes, 'x402-pay' ),
 				$minutes
 			);
 		}
@@ -485,14 +485,14 @@ final class PaywallController {
 			$hours = max( 1, (int) round( $ttl_seconds / HOUR_IN_SECONDS ) );
 			return sprintf(
 				/* translators: %d: number of hours the grant is valid for. */
-				_n( 'Access for %d hour', 'Access for %d hours', $hours, 'x402press' ),
+				_n( 'Access for %d hour', 'Access for %d hours', $hours, 'x402-pay' ),
 				$hours
 			);
 		}
 		$days = max( 1, (int) round( $ttl_seconds / DAY_IN_SECONDS ) );
 		return sprintf(
 			/* translators: %d: number of days the grant is valid for. */
-			_n( 'Access for %d day', 'Access for %d days', $days, 'x402press' ),
+			_n( 'Access for %d day', 'Access for %d days', $days, 'x402-pay' ),
 			$days
 		);
 	}

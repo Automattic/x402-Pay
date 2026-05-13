@@ -1,6 +1,6 @@
 {
 	"$schema": "https://playground.wordpress.net/blueprint-schema.json",
-	"landingPage": "/wp-admin/admin.php?page=x402press",
+	"landingPage": "/wp-admin/admin.php?page=x402-pay",
 	"steps": [
 		{
 			"step": "login",

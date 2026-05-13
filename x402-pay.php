@@ -7,7 +7,7 @@
  * Requires PHP:      8.1
  * License:           GPL-3.0-or-later
  * License URI:       https://www.gnu.org/licenses/gpl-3.0.html
- * Text Domain:       x402press
+ * Text Domain:       x402-pay
  *
  * @package X402Press
  */

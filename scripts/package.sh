@@ -24,7 +24,7 @@ tmp="$(mktemp -d)"
 
 root="${tmp}/x402-pay"
 mkdir -p "${root}/assets"
-cp x402press.php "${root}/"
+cp x402-pay.php "${root}/"
 cp -R src "${root}/"
 find "${root}/src" -type d -empty -delete 2>/dev/null || true
 # Prune dangling symlinks left over from local path-repo dev (e.g. companion

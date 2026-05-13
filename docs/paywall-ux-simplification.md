@@ -127,6 +127,6 @@ Apply in order; first strong match wins where noted; otherwise combine bot flag 
 
 - **2026-04-26** — Phase B: `PaywallController` negotiates **JSON vs HTML** 402 bodies from `PaywallClientProfile` (`document_navigation_intent` → HTML excerpt template; else JSON). Filters `x402press_paywall_excerpt_text`, `x402press_paywall_html_402_body`; admin paywall probe accepts HTML 402.
 - **2026-04-26** — Phase A: `PaywallClientProfile` classifier, stable `Accept` / `Sec-Fetch-*` keys on paywall requests, `x402press_paywall_client_profile` filter (402 body unchanged).
-- **2026-04-26** — Phase D: unified Settings → x402press **Run checks** (facilitator connectivity, then paywall probe); per-step results in admin UI.
+- **2026-04-26** — Phase D: unified Settings → x402 Pay **Run checks** (facilitator connectivity, then paywall probe); per-step results in admin UI.
 - **2026-04-25** — Initial doc from agreed product decisions.
 - **2026-04-26** — Matrix and Phase B/C/D revisions: **`everyone`** uses same HTML 402 as document-style bots for exploration/QA; **keep audience + facilitator UI** until wpcom ships; Phase C = staging (default wpcom, hide wallet only when managed `payTo` applies); Phase B notes probe updates after HTML 402.

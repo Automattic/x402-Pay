@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
-<ruleset name="x402press">
-    <description>Coding standards for the x402press plugin.</description>
-    <file>x402press.php</file>
+<ruleset name="x402-pay">
+    <description>Coding standards for the x402 Pay plugin.</description>
+    <file>x402-pay.php</file>
     <file>src</file>
     <arg name="extensions" value="php"/>
     <arg name="colors"/>
@@ -16,7 +16,7 @@
     <rule ref="WordPress.WP.I18n">
         <properties>
             <property name="text_domain" type="array">
-                <element value="x402press"/>
+                <element value="x402-pay"/>
             </property>
         </properties>
     </rule>

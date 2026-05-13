@@ -1,5 +1,5 @@
 {
-  "name": "x402press-test-pay",
+  "name": "x402-pay-test-pay",
   "private": true,
   "type": "module",
   "dependencies": {

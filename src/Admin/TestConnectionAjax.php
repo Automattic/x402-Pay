@@ -12,7 +12,7 @@ namespace X402Press\Admin;
 use X402Press\Facilitator\FacilitatorResolver;
 
 /**
- * Powers the Settings → x402press "Test connection" button.
+ * Powers the Settings → x402 Pay "Test connection" button.
  *
  * Registered on `wp_ajax_x402press_test_connector`. Admin-only,
  * nonce-checked. Resolves the posted connector_id through FacilitatorResolver

@@ -46,7 +46,7 @@ final class Provider {
 
 		$providers[] = array(
 			'id'          => self::PROVIDER_ID,
-			'label'       => __( 'Pay with a browser wallet', 'x402press' ),
+			'label'       => __( 'Pay with a browser wallet', 'x402-pay' ),
 			'script_url'  => plugins_url( 'src/Payment/Providers/EvmWallet/script.js', X402PRESS_FILE ),
 			'is_eligible' => true,
 		);
