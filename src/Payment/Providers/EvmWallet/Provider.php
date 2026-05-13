@@ -2,14 +2,14 @@
 /**
  * EIP-6963 EVM wallet provider registration.
  *
- * @package X402Press
+ * @package X402Pay
  */
 
 declare(strict_types=1);
 
-namespace X402Press\Payment\Providers\EvmWallet;
+namespace X402Pay\Payment\Providers\EvmWallet;
 
-use X402Press\Payment\PaymentProviderRegistry;
+use X402Pay\Payment\PaymentProviderRegistry;
 
 /**
  * Renders one row per browser-extension wallet that announces itself via the
@@ -47,7 +47,7 @@ final class Provider {
 		$providers[] = array(
 			'id'          => self::PROVIDER_ID,
 			'label'       => __( 'Pay with a browser wallet', 'x402-pay' ),
-			'script_url'  => plugins_url( 'src/Payment/Providers/EvmWallet/script.js', X402PRESS_FILE ),
+			'script_url'  => plugins_url( 'src/Payment/Providers/EvmWallet/script.js', X402_PAY_FILE ),
 			'is_eligible' => true,
 		);
 		return $providers;

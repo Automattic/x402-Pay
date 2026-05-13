@@ -2,16 +2,16 @@
 /**
  * Filter-based registry for front-end payment providers shown on 402 pages.
  *
- * @package X402Press
+ * @package X402Pay
  */
 
 declare(strict_types=1);
 
-namespace X402Press\Payment;
+namespace X402Pay\Payment;
 
 /**
  * Resolves the list of payment-button providers eligible for a given 402
- * response. Providers register via the `x402press_payment_providers` filter
+ * response. Providers register via the `x402_pay_payment_providers` filter
  * and return descriptors of shape:
  *
  *   array{
@@ -31,7 +31,7 @@ final class PaymentProviderRegistry {
 	 * Filter hook name. Receives `(array $providers, array $context)` and must
 	 * return the (possibly extended) provider list.
 	 */
-	public const FILTER = 'x402press_payment_providers';
+	public const FILTER = 'x402_pay_payment_providers';
 
 	/**
 	 * @param array<string,mixed> $context Includes `requirements`, `resource_url`, `request`.

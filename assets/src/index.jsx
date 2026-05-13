@@ -16,7 +16,7 @@ import { DataForm } from '@wordpress/dataviews';
 
 import './style.scss';
 
-const config = window.x402pressSettings;
+const config = window.x402PaySettings;
 
 const boltIcon = (
 	<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" focusable="false">
@@ -32,7 +32,7 @@ const spinnerIcon = (
 		height="16"
 		aria-hidden="true"
 		focusable="false"
-		className="x402press-spinner-icon"
+		className="x402-pay-spinner-icon"
 	>
 		<circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="2" fill="none" strokeOpacity="0.25" />
 		<path d="M12 3 A9 9 0 0 1 21 12" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" />
@@ -189,7 +189,7 @@ function DiagnosticProbeLine( { pending, awaiting, success, durationMs, failureM
 	if ( pending ) {
 		return (
 			<HStack spacing={ 1 } alignment="left" justify="flex-start">
-				<span className="x402press-page__inline-spinner" aria-hidden="true">
+				<span className="x402-pay-page__inline-spinner" aria-hidden="true">
 					{ spinnerIcon }
 				</span>
 				<Text size={ 13 } variant="muted">
@@ -201,7 +201,7 @@ function DiagnosticProbeLine( { pending, awaiting, success, durationMs, failureM
 	if ( awaiting ) {
 		return (
 			<HStack spacing={ 1 } alignment="left" justify="flex-start">
-				<span className="x402press-page__inline-spinner" aria-hidden="true">
+				<span className="x402-pay-page__inline-spinner" aria-hidden="true">
 					{ clockIcon }
 				</span>
 				<Text size={ 13 } variant="muted">
@@ -212,8 +212,8 @@ function DiagnosticProbeLine( { pending, awaiting, success, durationMs, failureM
 	}
 	if ( infoMessage ) {
 		return (
-			<span className="x402press-page__probe-result x402press-page__probe-result--info">
-				<span className="x402press-page__probe-result__dot" aria-hidden="true" />
+			<span className="x402-pay-page__probe-result x402-pay-page__probe-result--info">
+				<span className="x402-pay-page__probe-result__dot" aria-hidden="true" />
 				<Text size={ 13 } variant="muted">
 					{ infoMessage }
 				</Text>
@@ -222,8 +222,8 @@ function DiagnosticProbeLine( { pending, awaiting, success, durationMs, failureM
 	}
 	if ( success ) {
 		return (
-			<span className="x402press-page__probe-result x402press-page__probe-result--ok">
-				<span className="x402press-page__probe-result__dot" aria-hidden="true" />
+			<span className="x402-pay-page__probe-result x402-pay-page__probe-result--ok">
+				<span className="x402-pay-page__probe-result__dot" aria-hidden="true" />
 				<Text size={ 13 } variant="muted">
 					{ durationMs != null
 						? sprintf(
@@ -238,8 +238,8 @@ function DiagnosticProbeLine( { pending, awaiting, success, durationMs, failureM
 	}
 	if ( failureMessage ) {
 		return (
-			<span className="x402press-page__probe-result x402press-page__probe-result--fail">
-				<span className="x402press-page__probe-result__dot" aria-hidden="true" />
+			<span className="x402-pay-page__probe-result x402-pay-page__probe-result--fail">
+				<span className="x402-pay-page__probe-result__dot" aria-hidden="true" />
 				<Text size={ 13 } variant="muted">
 					{ failureMessage }
 				</Text>
@@ -251,7 +251,7 @@ function DiagnosticProbeLine( { pending, awaiting, success, durationMs, failureM
 
 function SaveFooter( { disabled, saving, error, onSave } ) {
 	return (
-		<CardFooter className="x402press-page__card-footer">
+		<CardFooter className="x402-pay-page__card-footer">
 			<HStack spacing={ 3 } justify="flex-start">
 				<Button
 					variant="primary"
@@ -369,8 +369,8 @@ function deriveOverallStatus( runChecksPending, facilitatorCheck, paywallCheck )
 
 function StatusPill( { status } ) {
 	return (
-		<span className={ `x402press-status-pill x402press-status-pill--${ status }` }>
-			<span className="x402press-status-pill__dot" aria-hidden="true" />
+		<span className={ `x402-pay-status-pill x402-pay-status-pill--${ status }` }>
+			<span className="x402-pay-status-pill__dot" aria-hidden="true" />
 			{ STATUS_PILL_LABELS[ status ] }
 		</span>
 	);
@@ -438,7 +438,7 @@ function RunChecksCard( {
 					) }
 					{ showSteps && (
 						<VStack spacing={ 3 }>
-							<VStack spacing={ 0 } className="x402press-page__run-checks-step">
+							<VStack spacing={ 0 } className="x402-pay-page__run-checks-step">
 								<Text size={ 12 } weight={ 600 }>
 									{ __( 'Facilitator connectivity', 'x402-pay' ) }
 								</Text>
@@ -451,7 +451,7 @@ function RunChecksCard( {
 									infoMessage={ facilitatorCheck?.infoMessage }
 								/>
 							</VStack>
-							<VStack spacing={ 0 } className="x402press-page__run-checks-step">
+							<VStack spacing={ 0 } className="x402-pay-page__run-checks-step">
 								<Text size={ 12 } weight={ 600 }>
 									{ __( 'Paywall live probe', 'x402-pay' ) }
 								</Text>
@@ -466,7 +466,7 @@ function RunChecksCard( {
 							</VStack>
 						</VStack>
 					) }
-					<HStack spacing={ 3 } justify="flex-start" className="x402press-page__probe-row">
+					<HStack spacing={ 3 } justify="flex-start" className="x402-pay-page__probe-row">
 						<Button
 							variant="secondary"
 							size="compact"
@@ -852,12 +852,12 @@ function FacilitatorCard( {
 				/>
 				{ '' !== facilitator && (
 					<>
-						<div className="x402press-page__divider" />
+						<div className="x402-pay-page__divider" />
 						{ apiKeyInputsVisible && (
 							<>
-								<div className="x402press-page__api-keys">
+								<div className="x402-pay-page__api-keys">
 									{ adminMeta && (
-										<div className="x402press-page__api-keys-intro">
+										<div className="x402-pay-page__api-keys-intro">
 											{ adminMeta.introHeadline && (
 												<Text size={ 13 }>{ adminMeta.introHeadline }</Text>
 											) }
@@ -888,7 +888,7 @@ function FacilitatorCard( {
 										help={
 											keyIdInvalid && adminMeta?.keyIdInvalidMessage ? (
 												<span
-													className="x402press-page__field-error"
+													className="x402-pay-page__field-error"
 													role="alert"
 												>
 													{ adminMeta.keyIdInvalidMessage }
@@ -899,8 +899,8 @@ function FacilitatorCard( {
 										onChange={ ( value ) => onWalletChange( { api_key_id: value } ) }
 										aria-invalid={ keyIdInvalid ? 'true' : 'false' }
 									/>
-									<div className="x402press-page__api-key-secret">
-										<div className="components-base-control__label x402press-page__api-key-secret-label">
+									<div className="x402-pay-page__api-key-secret">
+										<div className="components-base-control__label x402-pay-page__api-key-secret-label">
 											{ __( 'API key secret', 'x402-pay' ) }
 										</div>
 										{ ! secretEditable && credentialState.has_secret && (
@@ -965,7 +965,7 @@ function FacilitatorCard( {
 												help={
 													secretInvalid && adminMeta?.keySecretInvalidMessage ? (
 														<span
-															className="x402press-page__field-error"
+															className="x402-pay-page__field-error"
 															role="alert"
 														>
 															{ adminMeta.keySecretInvalidMessage }
@@ -990,15 +990,15 @@ function FacilitatorCard( {
 										) }
 									</div>
 								</div>
-								<div className="x402press-page__divider" />
+								<div className="x402-pay-page__divider" />
 							</>
 						) }
 						{ walletInputVisible ? (
 							<div
 								className={
 									walletError
-										? 'x402press-page__wallet x402press-page__wallet--error'
-										: 'x402press-page__wallet'
+										? 'x402-pay-page__wallet x402-pay-page__wallet--error'
+										: 'x402-pay-page__wallet'
 								}
 							>
 								<TextControl
@@ -1009,7 +1009,7 @@ function FacilitatorCard( {
 									help={
 										walletError ? (
 											<span
-												className="x402press-page__field-error"
+												className="x402-pay-page__field-error"
 												role="alert"
 											>
 												{ walletError }
@@ -1290,8 +1290,8 @@ function SettingsApp() {
 	}, [] );
 
 	return (
-		<div className="x402press-page__content">
-			<div className="x402press-page__notices" ref={ noticesRef } />
+		<div className="x402-pay-page__content">
+			<div className="x402-pay-page__notices" ref={ noticesRef } />
 			<VStack spacing={ 6 }>
 				<RunChecksCard
 					paywallDirty={ paywallDirty }
@@ -1326,7 +1326,7 @@ function SettingsApp() {
 	);
 }
 
-const mount = document.getElementById( 'x402press-app' );
+const mount = document.getElementById( 'x402-pay-app' );
 if ( mount ) {
 	createRoot( mount ).render( <SettingsApp /> );
 }

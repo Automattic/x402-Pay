@@ -2,14 +2,14 @@
 /**
  * Taxonomy side-effects for the paywall category.
  *
- * @package X402Press
+ * @package X402Pay
  */
 
 declare(strict_types=1);
 
-namespace X402Press\Services;
+namespace X402Pay\Services;
 
-use X402Press\Settings\SettingsRepository;
+use X402Pay\Settings\SettingsRepository;
 
 /**
  * Manages the WordPress `category` term used by the paywall.

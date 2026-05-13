@@ -1,17 +1,17 @@
 <?php
 declare(strict_types=1);
 
-namespace X402Press\Tests\Unit\Connectors\Coinbase;
+namespace X402Pay\Tests\Unit\Connectors\Coinbase;
 
 use PHPUnit\Framework\TestCase;
-use X402Press\Connectors\Coinbase\Registrar;
+use X402Pay\Connectors\Coinbase\Registrar;
 
 final class RegistrarTest extends TestCase {
 
 	public function test_provide_admin_meta_returns_existing_for_other_connectors(): void {
 		$registrar = new Registrar();
 		$other     = array( 'something' => 'else' );
-		$this->assertSame( $other, $registrar->provide_admin_meta( $other, 'x402press_test' ) );
+		$this->assertSame( $other, $registrar->provide_admin_meta( $other, 'x402_pay_test' ) );
 	}
 
 	public function test_provide_admin_meta_supplies_intro_docs_and_validation(): void {

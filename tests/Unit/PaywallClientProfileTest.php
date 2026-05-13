@@ -1,10 +1,10 @@
 <?php
 declare(strict_types=1);
 
-namespace X402Press\Tests\Unit;
+namespace X402Pay\Tests\Unit;
 
 use PHPUnit\Framework\TestCase;
-use X402Press\Services\PaywallClientProfile;
+use X402Pay\Services\PaywallClientProfile;
 
 final class PaywallClientProfileTest extends TestCase {
 

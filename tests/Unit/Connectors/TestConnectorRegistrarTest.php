@@ -1,16 +1,16 @@
 <?php
 declare(strict_types=1);
 
-namespace X402Press\Tests\Unit\Connectors;
+namespace X402Pay\Tests\Unit\Connectors;
 
 use PHPUnit\Framework\TestCase;
-use X402Press\Connectors\ConnectorRegistry;
-use X402Press\Connectors\TestConnectorRegistrar;
+use X402Pay\Connectors\ConnectorRegistry;
+use X402Pay\Connectors\TestConnectorRegistrar;
 
 final class TestConnectorRegistrarTest extends TestCase {
 
 	protected function setUp(): void {
-		$GLOBALS['__x402press_connectors'] = array();
+		$GLOBALS['__x402_pay_connectors'] = array();
 	}
 
 	public function test_payload_uses_only_core_preserved_fields(): void {

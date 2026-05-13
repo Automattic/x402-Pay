@@ -13,8 +13,8 @@
  * Spec: https://eips.ethereum.org/EIPS/eip-6963
  */
 ( function () {
-	if ( ! window.x402press || typeof window.x402press.registerProvider !== 'function' ) {
-		console.error( '[x402press] evm-wallet provider loaded before host; skipping.' );
+	if ( ! window.x402Pay || typeof window.x402Pay.registerProvider !== 'function' ) {
+		console.error( '[x402-pay] evm-wallet provider loaded before host; skipping.' );
 		return;
 	}
 
@@ -204,7 +204,7 @@
 		return '';
 	}
 
-	window.x402press.registerProvider( 'evm-wallet', function ( host ) {
+	window.x402Pay.registerProvider( 'evm-wallet', function ( host ) {
 		// Wallets keyed by `rdns` (reverse-DNS identifier — stable across
 		// versions, unique per extension). Lets multiple installs of the
 		// same wallet — or wallets that announce twice — collapse to one row.
@@ -270,14 +270,14 @@
 
 			var button = document.createElement( 'button' );
 			button.type = 'button';
-			button.className = 'x402press-pay-button';
+			button.className = 'x402-pay-button';
 			button.setAttribute( 'data-wallet-rdns', key );
 
 			// The wallet's own icon (typically a data URI). Rendering it
-			// inside `.x402press-pay-icon` picks up the existing border-radius
+			// inside `.x402-pay-icon` picks up the existing border-radius
 			// so EIP-6963 wallets line up visually with built-in providers.
 			var iconSpan = document.createElement( 'span' );
-			iconSpan.className = 'x402press-pay-icon';
+			iconSpan.className = 'x402-pay-icon';
 			iconSpan.setAttribute( 'aria-hidden', 'true' );
 			var iconSrc = sanitizeIconSrc( info.icon );
 			if ( iconSrc ) {
@@ -289,7 +289,7 @@
 			button.appendChild( iconSpan );
 
 			var labelSpan = document.createElement( 'span' );
-			labelSpan.className = 'x402press-pay-label';
+			labelSpan.className = 'x402-pay-label';
 			labelSpan.textContent = ( typeof info.name === 'string' && info.name )
 				? 'Pay with ' + info.name
 				: 'Pay with this wallet';
@@ -322,7 +322,7 @@
 			// suggest. Empty state is a no-op so detected-wallet users
 			// don't see a vestigial header.
 			var divider = document.createElement( 'div' );
-			divider.className = 'x402press-section-divider';
+			divider.className = 'x402-pay-section-divider';
 			divider.textContent = ( wallets.size > 0 )
 				? 'or get a wallet'
 				: 'don’t have a wallet?';
@@ -330,18 +330,18 @@
 
 			missing.forEach( function ( w ) {
 				var link = document.createElement( 'a' );
-				link.className = 'x402press-pay-button x402press-pay-button--install';
+				link.className = 'x402-pay-button x402-pay-button--install';
 				link.href = w.installUrl;
 				link.target = '_blank';
 				link.rel = 'noopener noreferrer';
 
 				var label = document.createElement( 'span' );
-				label.className = 'x402press-pay-label';
+				label.className = 'x402-pay-label';
 				label.textContent = 'Install ' + w.name;
 				link.appendChild( label );
 
 				var meta = document.createElement( 'span' );
-				meta.className = 'x402press-pay-meta';
+				meta.className = 'x402-pay-meta';
 				meta.setAttribute( 'aria-hidden', 'true' );
 				meta.textContent = '↗';
 				link.appendChild( meta );

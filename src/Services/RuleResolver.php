@@ -2,15 +2,15 @@
 /**
  * Resolves a per-request payment rule via filter.
  *
- * @package X402Press
+ * @package X402Pay
  */
 
 declare(strict_types=1);
 
-namespace X402Press\Services;
+namespace X402Pay\Services;
 
 /**
- * Thin wrapper around the `x402press_rule_for_request` filter.
+ * Thin wrapper around the `x402_pay_rule_for_request` filter.
  *
  * Callers pass a request context array; we apply the filter, validate the
  * returned shape, and return either a normalised rule or null.
@@ -23,7 +23,7 @@ namespace X402Press\Services;
  */
 final class RuleResolver {
 
-	public const HOOK        = 'x402press_rule_for_request';
+	public const HOOK        = 'x402_pay_rule_for_request';
 	public const DEFAULT_TTL = 86400;
 
 	/**

@@ -2,12 +2,12 @@
 /**
  * Emits hooks (and optional HTTP) after a successful on-chain settle.
  *
- * @package X402Press
+ * @package X402Pay
  */
 
 declare(strict_types=1);
 
-namespace X402Press\Services;
+namespace X402Pay\Services;
 
 /**
  * Fires {@see FacilitatorHooks::PAYMENT_SETTLED} and optionally POSTs JSON to a

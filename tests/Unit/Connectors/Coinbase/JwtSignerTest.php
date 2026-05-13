@@ -1,10 +1,10 @@
 <?php
 declare(strict_types=1);
 
-namespace X402Press\Tests\Unit\Connectors\Coinbase;
+namespace X402Pay\Tests\Unit\Connectors\Coinbase;
 
 use PHPUnit\Framework\TestCase;
-use X402Press\Connectors\Coinbase\JwtSigner;
+use X402Pay\Connectors\Coinbase\JwtSigner;
 
 final class JwtSignerTest extends TestCase {
 

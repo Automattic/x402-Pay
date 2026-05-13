@@ -2,20 +2,20 @@
 /**
  * Admin: Settings → x402 Pay page.
  *
- * @package X402Press
+ * @package X402Pay
  */
 
 declare(strict_types=1);
 
-namespace X402Press\Admin;
+namespace X402Pay\Admin;
 
-use X402Press\Admin\SettingsAjax;
-use X402Press\Admin\PaywallProbeAjax;
-use X402Press\Admin\TestConnectionAjax;
-use X402Press\Connectors\ConnectorRegistry;
-use X402Press\Services\ConnectorCredentialStore;
-use X402Press\Services\FacilitatorHooks;
-use X402Press\Settings\SettingsRepository;
+use X402Pay\Admin\SettingsAjax;
+use X402Pay\Admin\PaywallProbeAjax;
+use X402Pay\Admin\TestConnectionAjax;
+use X402Pay\Connectors\ConnectorRegistry;
+use X402Pay\Services\ConnectorCredentialStore;
+use X402Pay\Services\FacilitatorHooks;
+use X402Pay\Settings\SettingsRepository;
 
 /**
  * Settings → x402 Pay admin page.
@@ -28,8 +28,8 @@ use X402Press\Settings\SettingsRepository;
 final class SettingsPage {
 
 	public const MENU_SLUG     = 'x402-pay';
-	public const GROUP         = 'x402press_settings_group';
-	public const SCRIPT_HANDLE = 'x402press-admin';
+	public const GROUP         = 'x402_pay_settings_group';
+	public const SCRIPT_HANDLE = 'x402-pay-admin';
 
 	public function __construct(
 		private readonly SettingsRepository $settings,
@@ -53,7 +53,7 @@ final class SettingsPage {
 	public function admin_body_class( string $classes ): string {
 		$screen = function_exists( 'get_current_screen' ) ? get_current_screen() : null;
 		if ( $screen && 'settings_page_' . self::MENU_SLUG === $screen->id ) {
-			$classes .= ' x402press-screen';
+			$classes .= ' x402-pay-screen';
 		}
 		return $classes;
 	}
@@ -66,17 +66,17 @@ final class SettingsPage {
 			return;
 		}
 
-		$asset_path = X402PRESS_DIR . 'assets/build/index.asset.php';
+		$asset_path = X402_PAY_DIR . 'assets/build/index.asset.php';
 		$asset      = file_exists( $asset_path )
 			? require $asset_path
 			: array(
 				'dependencies' => array(),
-				'version'      => X402PRESS_VERSION,
+				'version'      => X402_PAY_VERSION,
 			);
 
 		wp_enqueue_script(
 			self::SCRIPT_HANDLE,
-			plugins_url( 'assets/build/index.js', X402PRESS_FILE ),
+			plugins_url( 'assets/build/index.js', X402_PAY_FILE ),
 			$asset['dependencies'],
 			$asset['version'],
 			true
@@ -84,11 +84,11 @@ final class SettingsPage {
 
 		wp_enqueue_style( 'wp-components' );
 
-		$style_path = X402PRESS_DIR . 'assets/build/style-index.css';
+		$style_path = X402_PAY_DIR . 'assets/build/style-index.css';
 		if ( file_exists( $style_path ) ) {
 			wp_enqueue_style(
 				self::SCRIPT_HANDLE,
-				plugins_url( 'assets/build/style-index.css', X402PRESS_FILE ),
+				plugins_url( 'assets/build/style-index.css', X402_PAY_FILE ),
 				array( 'wp-components' ),
 				$asset['version']
 			);
@@ -96,7 +96,7 @@ final class SettingsPage {
 
 		wp_localize_script(
 			self::SCRIPT_HANDLE,
-			'x402pressSettings',
+			'x402PaySettings',
 			$this->bootstrap_data()
 		);
 	}
@@ -130,7 +130,7 @@ final class SettingsPage {
 	}
 
 	/**
-	 * Render the settings page shell. The React app paints itself into #x402press-app.
+	 * Render the settings page shell. The React app paints itself into #x402-pay-app.
 	 */
 	public function render(): void {
 		if ( ! current_user_can( 'manage_options' ) ) {
@@ -138,11 +138,11 @@ final class SettingsPage {
 		}
 		?>
 		<div class="wrap">
-			<header class="x402press-page__header">
-				<h1 class="x402press-page__header-title">
+			<header class="x402-pay-page__header">
+				<h1 class="x402-pay-page__header-title">
 					<?php esc_html_e( 'x402 Pay', 'x402-pay' ); ?>
 				</h1>
-				<p class="x402press-page__header-subtitle">
+				<p class="x402-pay-page__header-subtitle">
 					<?php
 					esc_html_e(
 						'Configure how the x402 paywall protects your content and where payments go.',
@@ -151,7 +151,7 @@ final class SettingsPage {
 					?>
 				</p>
 			</header>
-			<div id="x402press-app"></div>
+			<div id="x402-pay-app"></div>
 		</div>
 		<?php
 	}
@@ -298,7 +298,7 @@ final class SettingsPage {
 	}
 
 	private static function sanitize_interpolated_text( string $text ): string {
-		$token = '__X402PRESS_DOCS_PLACEHOLDER__';
+		$token = '__X402_PAY_DOCS_PLACEHOLDER__';
 		$text  = str_replace( '<docs/>', $token, $text );
 		$text  = sanitize_text_field( $text );
 		return str_replace( $token, '<docs/>', $text );

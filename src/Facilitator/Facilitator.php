@@ -2,19 +2,19 @@
 /**
  * Common surface every x402 facilitator client implements.
  *
- * @package X402Press
+ * @package X402Pay
  */
 
 declare(strict_types=1);
 
-namespace X402Press\Facilitator;
+namespace X402Pay\Facilitator;
 
-use X402Press\Services\FacilitatorProfile;
+use X402Pay\Services\FacilitatorProfile;
 
 /**
  * The plugin talks to every external facilitator service through this single
  * interface, regardless of network, asset, or auth scheme. Connector authors
- * return an instance from the `x402press_facilitator_for_connector` filter.
+ * return an instance from the `x402_pay_facilitator_for_connector` filter.
  */
 interface Facilitator {
 

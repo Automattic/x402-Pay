@@ -2,12 +2,12 @@
 /**
  * Read-side wrapper over the WordPress 7.0 Connectors API.
  *
- * @package X402Press
+ * @package X402Pay
  */
 
 declare(strict_types=1);
 
-namespace X402Press\Connectors;
+namespace X402Pay\Connectors;
 
 /**
  * Finds x402 facilitator connectors registered via the WP 7.0 Connectors API.

@@ -2,22 +2,22 @@
 /**
  * HTTP client for an x402 facilitator.
  *
- * @package X402Press
+ * @package X402Pay
  */
 
 declare(strict_types=1);
 
-namespace X402Press\Services;
+namespace X402Pay\Services;
 
-use X402Press\Facilitator\Facilitator;
-use X402Press\Facilitator\TestResult;
+use X402Pay\Facilitator\Facilitator;
+use X402Pay\Facilitator\TestResult;
 use Throwable;
 
 /**
  * Posts PaymentRequirements + PaymentPayload bodies to a facilitator's
  * /verify and /settle endpoints using wp_remote_post.
  *
- * Authentication is delegated to the optional {@see \X402Press\Facilitator\RequestSigner}
+ * Authentication is delegated to the optional {@see \X402Pay\Facilitator\RequestSigner}
  * carried by the profile — the client never knows which scheme is in play
  * (no auth, static bearer, signed JWT, …) and just merges whatever headers
  * the signer returns into each outbound request.

@@ -3,14 +3,14 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/../vendor/autoload.php';
 
-if ( ! defined( 'X402PRESS_FILE' ) ) {
-	define( 'X402PRESS_FILE', __DIR__ . '/../x402-pay.php' );
+if ( ! defined( 'X402_PAY_FILE' ) ) {
+	define( 'X402_PAY_FILE', __DIR__ . '/../x402-pay.php' );
 }
-if ( ! defined( 'X402PRESS_VERSION' ) ) {
-	define( 'X402PRESS_VERSION', '0.0.0-test' );
+if ( ! defined( 'X402_PAY_VERSION' ) ) {
+	define( 'X402_PAY_VERSION', '0.0.0-test' );
 }
-if ( ! defined( 'X402PRESS_DIR' ) ) {
-	define( 'X402PRESS_DIR', dirname( __DIR__ ) . '/' );
+if ( ! defined( 'X402_PAY_DIR' ) ) {
+	define( 'X402_PAY_DIR', dirname( __DIR__ ) . '/' );
 }
 // WordPress time constants — defined globally in wp-includes/default-constants.php
 // at runtime, but not present in the unit-test bootstrap.
@@ -81,18 +81,18 @@ if ( ! function_exists( 'trailingslashit' ) ) {
 
 if ( ! function_exists( 'get_option' ) ) {
 	function get_option( string $name, $default = false ) {
-		return $GLOBALS['__x402press_options'][ $name ] ?? $default;
+		return $GLOBALS['__x402_pay_options'][ $name ] ?? $default;
 	}
 }
 if ( ! function_exists( 'update_option' ) ) {
 	function update_option( string $name, $value, $autoload = null ): bool {
-		$GLOBALS['__x402press_options'][ $name ] = $value;
+		$GLOBALS['__x402_pay_options'][ $name ] = $value;
 		return true;
 	}
 }
 if ( ! function_exists( 'delete_option' ) ) {
 	function delete_option( string $name ): bool {
-		unset( $GLOBALS['__x402press_options'][ $name ] );
+		unset( $GLOBALS['__x402_pay_options'][ $name ] );
 		return true;
 	}
 }
@@ -116,11 +116,11 @@ if ( ! function_exists( 'is_wp_error' ) ) {
 }
 if ( ! function_exists( 'wp_remote_post' ) ) {
 	function wp_remote_post( string $url, array $args = array() ) {
-		$GLOBALS['__x402press_http'] = array( 'url' => $url, 'args' => $args );
-		if ( ! empty( $GLOBALS['__x402press_http_queue'] ) ) {
-			return array_shift( $GLOBALS['__x402press_http_queue'] );
+		$GLOBALS['__x402_pay_http'] = array( 'url' => $url, 'args' => $args );
+		if ( ! empty( $GLOBALS['__x402_pay_http_queue'] ) ) {
+			return array_shift( $GLOBALS['__x402_pay_http_queue'] );
 		}
-		$next = $GLOBALS['__x402press_http_next'] ?? null;
+		$next = $GLOBALS['__x402_pay_http_next'] ?? null;
 		if ( $next instanceof \WP_Error ) {
 			return $next;
 		}
@@ -129,11 +129,11 @@ if ( ! function_exists( 'wp_remote_post' ) ) {
 }
 if ( ! function_exists( 'wp_remote_head' ) ) {
 	function wp_remote_head( string $url, array $args = array() ) {
-		$GLOBALS['__x402press_http'] = array( 'url' => $url, 'args' => $args, 'method' => 'HEAD' );
-		if ( ! empty( $GLOBALS['__x402press_http_queue'] ) ) {
-			return array_shift( $GLOBALS['__x402press_http_queue'] );
+		$GLOBALS['__x402_pay_http'] = array( 'url' => $url, 'args' => $args, 'method' => 'HEAD' );
+		if ( ! empty( $GLOBALS['__x402_pay_http_queue'] ) ) {
+			return array_shift( $GLOBALS['__x402_pay_http_queue'] );
 		}
-		$next = $GLOBALS['__x402press_http_next'] ?? null;
+		$next = $GLOBALS['__x402_pay_http_next'] ?? null;
 		if ( $next instanceof \WP_Error ) {
 			return $next;
 		}
@@ -142,15 +142,15 @@ if ( ! function_exists( 'wp_remote_head' ) ) {
 }
 if ( ! function_exists( 'wp_remote_request' ) ) {
 	function wp_remote_request( string $url, array $args = array() ) {
-		$GLOBALS['__x402press_http'] = array(
+		$GLOBALS['__x402_pay_http'] = array(
 			'url'    => $url,
 			'args'   => $args,
 			'method' => $args['method'] ?? 'GET',
 		);
-		if ( ! empty( $GLOBALS['__x402press_http_queue'] ) ) {
-			return array_shift( $GLOBALS['__x402press_http_queue'] );
+		if ( ! empty( $GLOBALS['__x402_pay_http_queue'] ) ) {
+			return array_shift( $GLOBALS['__x402_pay_http_queue'] );
 		}
-		$next = $GLOBALS['__x402press_http_next'] ?? null;
+		$next = $GLOBALS['__x402_pay_http_next'] ?? null;
 		if ( $next instanceof \WP_Error ) {
 			return $next;
 		}
@@ -169,7 +169,7 @@ if ( ! function_exists( 'wp_remote_retrieve_body' ) ) {
 }
 if ( ! function_exists( 'apply_filters' ) ) {
 	function apply_filters( string $hook, $value, ...$args ) {
-		foreach ( $GLOBALS['__x402press_filters'][ $hook ] ?? array() as $cb ) {
+		foreach ( $GLOBALS['__x402_pay_filters'][ $hook ] ?? array() as $cb ) {
 			$value = $cb( $value, ...$args );
 		}
 		return $value;
@@ -177,7 +177,7 @@ if ( ! function_exists( 'apply_filters' ) ) {
 }
 if ( ! function_exists( 'add_filter' ) ) {
 	function add_filter( string $hook, callable $cb, int $priority = 10, int $accepted_args = 1 ): bool {
-		$GLOBALS['__x402press_filters'][ $hook ][] = $cb;
+		$GLOBALS['__x402_pay_filters'][ $hook ][] = $cb;
 		return true;
 	}
 }
@@ -186,7 +186,7 @@ if ( ! function_exists( 'has_term' ) ) {
 	 * @param string|int $term Term name or id.
 	 */
 	function has_term( $term, string $taxonomy, int $post_id ): bool {
-		return in_array( array( $term, $taxonomy, $post_id ), $GLOBALS['__x402press_terms'] ?? array(), true );
+		return in_array( array( $term, $taxonomy, $post_id ), $GLOBALS['__x402_pay_terms'] ?? array(), true );
 	}
 }
 if ( ! function_exists( 'term_exists' ) ) {
@@ -195,7 +195,7 @@ if ( ! function_exists( 'term_exists' ) ) {
 	 */
 	function term_exists( $term, string $taxonomy ) {
 		$is_id = is_int( $term ) || ( is_string( $term ) && ctype_digit( $term ) );
-		foreach ( $GLOBALS['__x402press_existing_terms'] ?? array() as $row ) {
+		foreach ( $GLOBALS['__x402_pay_existing_terms'] ?? array() as $row ) {
 			if ( $row['taxonomy'] !== $taxonomy ) {
 				continue;
 			}
@@ -211,7 +211,7 @@ if ( ! function_exists( 'term_exists' ) ) {
 }
 if ( ! function_exists( 'get_term' ) ) {
 	function get_term( int $term_id, string $taxonomy = '' ) {
-		foreach ( $GLOBALS['__x402press_existing_terms'] ?? array() as $row ) {
+		foreach ( $GLOBALS['__x402_pay_existing_terms'] ?? array() as $row ) {
 			if ( $row['term_id'] === $term_id
 				&& ( '' === $taxonomy || $row['taxonomy'] === $taxonomy )
 			) {
@@ -228,23 +228,23 @@ if ( ! function_exists( 'get_term' ) ) {
 }
 if ( ! function_exists( 'wp_insert_term' ) ) {
 	function wp_insert_term( string $term, string $taxonomy ) {
-		$term_id = count( $GLOBALS['__x402press_existing_terms'] ?? array() ) + 1;
+		$term_id = count( $GLOBALS['__x402_pay_existing_terms'] ?? array() ) + 1;
 		$row     = array(
 			'term_id'  => $term_id,
 			'name'     => $term,
 			'taxonomy' => $taxonomy,
 		);
-		$GLOBALS['__x402press_existing_terms'][] = $row;
-		$GLOBALS['__x402press_inserted_terms'][] = $row;
+		$GLOBALS['__x402_pay_existing_terms'][] = $row;
+		$GLOBALS['__x402_pay_inserted_terms'][] = $row;
 		return array( 'term_id' => $term_id );
 	}
 }
 if ( ! function_exists( 'wp_update_term' ) ) {
 	function wp_update_term( int $term_id, string $taxonomy, array $args = array() ) {
-		foreach ( $GLOBALS['__x402press_existing_terms'] as $idx => $row ) {
+		foreach ( $GLOBALS['__x402_pay_existing_terms'] as $idx => $row ) {
 			if ( $row['term_id'] === $term_id && $row['taxonomy'] === $taxonomy ) {
 				if ( isset( $args['name'] ) ) {
-					$GLOBALS['__x402press_existing_terms'][ $idx ]['name'] = (string) $args['name'];
+					$GLOBALS['__x402_pay_existing_terms'][ $idx ]['name'] = (string) $args['name'];
 				}
 				return array( 'term_id' => $term_id );
 			}
@@ -254,12 +254,12 @@ if ( ! function_exists( 'wp_update_term' ) ) {
 }
 if ( ! function_exists( 'get_post_type' ) ) {
 	function get_post_type( int $post_id ): string|false {
-		return $GLOBALS['__x402press_posts'][ $post_id ]['post_type'] ?? false;
+		return $GLOBALS['__x402_pay_posts'][ $post_id ]['post_type'] ?? false;
 	}
 }
 if ( ! function_exists( 'get_post_status' ) ) {
 	function get_post_status( int $post_id ): string|false {
-		return $GLOBALS['__x402press_posts'][ $post_id ]['post_status'] ?? false;
+		return $GLOBALS['__x402_pay_posts'][ $post_id ]['post_status'] ?? false;
 	}
 }
 if ( ! defined( 'OBJECT' ) ) {
@@ -277,7 +277,7 @@ if ( ! function_exists( 'get_post' ) ) {
 		if ( $post_id <= 0 ) {
 			return null;
 		}
-		$row = $GLOBALS['__x402press_posts'][ $post_id ] ?? null;
+		$row = $GLOBALS['__x402_pay_posts'][ $post_id ] ?? null;
 		if ( ! is_array( $row ) ) {
 			return null;
 		}
@@ -296,7 +296,7 @@ if ( ! function_exists( 'get_post' ) ) {
 }
 if ( ! function_exists( 'get_site_icon_url' ) ) {
 	function get_site_icon_url( int $size = 512, string $url = '', int $blog_id = 0 ): string {
-		return (string) ( $GLOBALS['__x402press_site_icon_url'] ?? '' );
+		return (string) ( $GLOBALS['__x402_pay_site_icon_url'] ?? '' );
 	}
 }
 if ( ! function_exists( 'get_bloginfo' ) ) {
@@ -305,7 +305,7 @@ if ( ! function_exists( 'get_bloginfo' ) ) {
 	 * @param string $filter Same contract as core: 'raw' | 'display' | …
 	 */
 	function get_bloginfo( string $show = '', string $filter = 'raw' ): string {
-		return (string) ( $GLOBALS['__x402press_bloginfo'][ $show ] ?? '' );
+		return (string) ( $GLOBALS['__x402_pay_bloginfo'][ $show ] ?? '' );
 	}
 }
 if ( ! function_exists( 'wp_strip_all_tags' ) ) {
@@ -331,12 +331,12 @@ if ( ! function_exists( 'wp_trim_words' ) ) {
 }
 if ( ! function_exists( 'get_transient' ) ) {
 	function get_transient( string $key ) {
-		$entry = $GLOBALS['__x402press_transients'][ $key ] ?? null;
+		$entry = $GLOBALS['__x402_pay_transients'][ $key ] ?? null;
 		if ( null === $entry ) {
 			return false;
 		}
 		if ( $entry['expires'] > 0 && $entry['expires'] < time() ) {
-			unset( $GLOBALS['__x402press_transients'][ $key ] );
+			unset( $GLOBALS['__x402_pay_transients'][ $key ] );
 			return false;
 		}
 		return $entry['value'];
@@ -344,7 +344,7 @@ if ( ! function_exists( 'get_transient' ) ) {
 }
 if ( ! function_exists( 'set_transient' ) ) {
 	function set_transient( string $key, $value, int $ttl = 0 ): bool {
-		$GLOBALS['__x402press_transients'][ $key ] = array(
+		$GLOBALS['__x402_pay_transients'][ $key ] = array(
 			'value'   => $value,
 			'expires' => $ttl > 0 ? time() + $ttl : 0,
 		);
@@ -358,7 +358,7 @@ if ( ! function_exists( 'home_url' ) ) {
 }
 if ( ! function_exists( 'status_header' ) ) {
 	function status_header( int $code ): void {
-		$GLOBALS['__x402press_response']['status'] = $code;
+		$GLOBALS['__x402_pay_response']['status'] = $code;
 	}
 }
 if ( ! function_exists( 'nocache_headers' ) ) {
@@ -366,12 +366,12 @@ if ( ! function_exists( 'nocache_headers' ) ) {
 }
 if ( ! function_exists( 'register_setting' ) ) {
 	function register_setting( string $group, string $option, array $args = array() ): void {
-		$GLOBALS['__x402press_registered_settings'][ $group ][ $option ] = $args;
+		$GLOBALS['__x402_pay_registered_settings'][ $group ][ $option ] = $args;
 	}
 }
 if ( ! function_exists( 'current_user_can' ) ) {
 	function current_user_can( string $cap ): bool {
-		$caps = $GLOBALS['__x402press_current_user_caps'] ?? null;
+		$caps = $GLOBALS['__x402_pay_current_user_caps'] ?? null;
 		if ( is_array( $caps ) ) {
 			return in_array( $cap, $caps, true );
 		}
@@ -380,13 +380,13 @@ if ( ! function_exists( 'current_user_can' ) ) {
 }
 if ( ! function_exists( 'get_current_user_id' ) ) {
 	function get_current_user_id(): int {
-		return (int) ( $GLOBALS['__x402press_current_user_id'] ?? 0 );
+		return (int) ( $GLOBALS['__x402_pay_current_user_id'] ?? 0 );
 	}
 }
 if ( ! function_exists( 'wp_create_nonce' ) ) {
 	function wp_create_nonce( string $action = '-1' ): string {
 		$uid = get_current_user_id();
-		return hash_hmac( 'sha256', $action . '|' . $uid, 'x402press-test-nonce-secret' );
+		return hash_hmac( 'sha256', $action . '|' . $uid, 'x402-pay-test-nonce-secret' );
 	}
 }
 if ( ! function_exists( 'wp_verify_nonce' ) ) {
@@ -401,7 +401,7 @@ if ( ! function_exists( 'get_posts' ) ) {
 	 * @return array<int,\WP_Post|int>
 	 */
 	function get_posts( array $args = array() ): array {
-		return $GLOBALS['__x402press_get_posts_return'] ?? array();
+		return $GLOBALS['__x402_pay_get_posts_return'] ?? array();
 	}
 }
 if ( ! function_exists( 'get_permalink' ) ) {
@@ -423,13 +423,13 @@ if ( ! function_exists( 'check_ajax_referer' ) ) {
 }
 if ( ! function_exists( 'wp_send_json_success' ) ) {
 	function wp_send_json_success( $data = null ): void {
-		$GLOBALS['__x402press_json_success'] = $data;
+		$GLOBALS['__x402_pay_json_success'] = $data;
 	}
 }
 if ( ! function_exists( 'wp_send_json_error' ) ) {
 	function wp_send_json_error( $data = null, int $status_code = 0 ): void {
-		$GLOBALS['__x402press_json_error']             = $data;
-		$GLOBALS['__x402press_json_error_status_code'] = $status_code;
+		$GLOBALS['__x402_pay_json_error']             = $data;
+		$GLOBALS['__x402_pay_json_error_status_code'] = $status_code;
 	}
 }
 if ( ! function_exists( 'esc_html_e' ) ) {
@@ -459,7 +459,7 @@ if ( ! function_exists( 'submit_button' ) ) {
 }
 if ( ! function_exists( 'add_settings_error' ) ) {
 	function add_settings_error( string $setting, string $code, string $message, string $type = 'error' ): void {
-		$GLOBALS['__x402press_settings_errors'][] = array(
+		$GLOBALS['__x402_pay_settings_errors'][] = array(
 			'setting' => $setting,
 			'code'    => $code,
 			'message' => $message,
@@ -469,7 +469,7 @@ if ( ! function_exists( 'add_settings_error' ) ) {
 }
 if ( ! function_exists( 'settings_errors' ) ) {
 	function settings_errors( string $setting = '' ): void {
-		$GLOBALS['__x402press_settings_errors_rendered'] = true;
+		$GLOBALS['__x402_pay_settings_errors_rendered'] = true;
 	}
 }
 if ( ! function_exists( 'checked' ) ) {
@@ -497,7 +497,7 @@ if ( ! function_exists( 'plugins_url' ) ) {
 }
 if ( ! function_exists( 'wp_enqueue_script' ) ) {
 	function wp_enqueue_script( string $handle, string $src = '', array $deps = array(), $ver = false, $in_footer = false ): bool {
-		$GLOBALS['__x402press_enqueued_scripts'][ $handle ] = array(
+		$GLOBALS['__x402_pay_enqueued_scripts'][ $handle ] = array(
 			'src'       => $src,
 			'deps'      => $deps,
 			'ver'       => $ver,
@@ -508,13 +508,13 @@ if ( ! function_exists( 'wp_enqueue_script' ) ) {
 }
 if ( ! function_exists( 'wp_localize_script' ) ) {
 	function wp_localize_script( string $handle, string $object_name, array $data ): bool {
-		$GLOBALS['__x402press_localized_data'][ $handle ][ $object_name ] = $data;
+		$GLOBALS['__x402_pay_localized_data'][ $handle ][ $object_name ] = $data;
 		return true;
 	}
 }
 if ( ! function_exists( 'wp_enqueue_style' ) ) {
 	function wp_enqueue_style( string $handle, string $src = '', array $deps = array(), $ver = false, string $media = 'all' ): bool {
-		$GLOBALS['__x402press_enqueued_styles'][ $handle ] = array(
+		$GLOBALS['__x402_pay_enqueued_styles'][ $handle ] = array(
 			'src'  => $src,
 			'deps' => $deps,
 			'ver'  => $ver,
@@ -526,7 +526,7 @@ if ( ! function_exists( 'get_terms' ) ) {
 	function get_terms( array $args = array() ): array {
 		$taxonomy = (string) ( $args['taxonomy'] ?? 'category' );
 		$out      = array();
-		foreach ( $GLOBALS['__x402press_existing_terms'] ?? array() as $row ) {
+		foreach ( $GLOBALS['__x402_pay_existing_terms'] ?? array() as $row ) {
 			if ( ( $row['taxonomy'] ?? '' ) !== $taxonomy ) {
 				continue;
 			}
@@ -548,7 +548,7 @@ if ( ! function_exists( 'wp_dropdown_categories' ) ) {
 		$echo     = ! empty( $args['echo'] );
 
 		$options = '';
-		foreach ( $GLOBALS['__x402press_existing_terms'] ?? array() as $row ) {
+		foreach ( $GLOBALS['__x402_pay_existing_terms'] ?? array() as $row ) {
 			if ( ( $row['taxonomy'] ?? '' ) !== $taxonomy ) {
 				continue;
 			}
@@ -581,28 +581,28 @@ if ( ! function_exists( 'admin_url' ) ) {
 }
 if ( ! function_exists( 'is_admin' ) ) {
 	function is_admin(): bool {
-		return (bool) ( $GLOBALS['__x402press_is_admin'] ?? false );
+		return (bool) ( $GLOBALS['__x402_pay_is_admin'] ?? false );
 	}
 }
 if ( ! function_exists( 'get_current_screen' ) ) {
 	function get_current_screen(): ?object {
-		$id = $GLOBALS['__x402press_current_screen_id'] ?? null;
+		$id = $GLOBALS['__x402_pay_current_screen_id'] ?? null;
 		return null === $id ? null : (object) array( 'id' => (string) $id );
 	}
 }
 if ( ! function_exists( 'is_singular' ) ) {
 	function is_singular( $post_types = '' ): bool {
-		return (bool) ( $GLOBALS['__x402press_is_singular'] ?? false );
+		return (bool) ( $GLOBALS['__x402_pay_is_singular'] ?? false );
 	}
 }
 if ( ! function_exists( 'get_queried_object_id' ) ) {
 	function get_queried_object_id(): int {
-		return (int) ( $GLOBALS['__x402press_queried_object_id'] ?? 0 );
+		return (int) ( $GLOBALS['__x402_pay_queried_object_id'] ?? 0 );
 	}
 }
 if ( ! function_exists( 'add_query_arg' ) ) {
 	function add_query_arg( $args = array() ): string {
-		return (string) ( $GLOBALS['__x402press_request_uri'] ?? '/' );
+		return (string) ( $GLOBALS['__x402_pay_request_uri'] ?? '/' );
 	}
 }
 if ( ! function_exists( 'esc_html__' ) ) {
@@ -617,13 +617,13 @@ if ( ! function_exists( 'esc_attr__' ) ) {
 }
 if ( ! function_exists( 'add_action' ) ) {
 	function add_action( string $hook, callable $cb, int $priority = 10, int $accepted_args = 1 ): bool {
-		$GLOBALS['__x402press_actions'][ $hook ][] = $cb;
+		$GLOBALS['__x402_pay_actions'][ $hook ][] = $cb;
 		return true;
 	}
 }
 if ( ! function_exists( 'do_action' ) ) {
 	function do_action( string $hook, mixed ...$args ): void {
-		foreach ( $GLOBALS['__x402press_actions'][ $hook ] ?? array() as $cb ) {
+		foreach ( $GLOBALS['__x402_pay_actions'][ $hook ] ?? array() as $cb ) {
 			$cb( ...$args );
 		}
 	}
@@ -648,43 +648,43 @@ if ( ! class_exists( 'WP_Connector_Registry' ) ) {
 	 */
 	class WP_Connector_Registry {
 		public function register( string $id, array $args ): bool {
-			$GLOBALS['__x402press_connectors'][ $id ] = $args;
+			$GLOBALS['__x402_pay_connectors'][ $id ] = $args;
 			return true;
 		}
 
 		public function unregister( string $id ): ?array {
-			$prev = $GLOBALS['__x402press_connectors'][ $id ] ?? null;
-			unset( $GLOBALS['__x402press_connectors'][ $id ] );
+			$prev = $GLOBALS['__x402_pay_connectors'][ $id ] ?? null;
+			unset( $GLOBALS['__x402_pay_connectors'][ $id ] );
 			return $prev;
 		}
 
 		public function is_registered( string $id ): bool {
-			return isset( $GLOBALS['__x402press_connectors'][ $id ] );
+			return isset( $GLOBALS['__x402_pay_connectors'][ $id ] );
 		}
 
 		public function get_registered( string $id ): ?array {
-			return $GLOBALS['__x402press_connectors'][ $id ] ?? null;
+			return $GLOBALS['__x402_pay_connectors'][ $id ] ?? null;
 		}
 
 		/** @return array<string,array> */
 		public function get_all_registered(): array {
-			return $GLOBALS['__x402press_connectors'] ?? array();
+			return $GLOBALS['__x402_pay_connectors'] ?? array();
 		}
 	}
 }
 if ( ! function_exists( 'wp_get_connectors' ) ) {
 	function wp_get_connectors(): array {
-		return $GLOBALS['__x402press_connectors'] ?? array();
+		return $GLOBALS['__x402_pay_connectors'] ?? array();
 	}
 }
 if ( ! function_exists( 'wp_get_connector' ) ) {
 	function wp_get_connector( string $id ): ?array {
-		return $GLOBALS['__x402press_connectors'][ $id ] ?? null;
+		return $GLOBALS['__x402_pay_connectors'][ $id ] ?? null;
 	}
 }
 if ( ! function_exists( 'wp_is_connector_registered' ) ) {
 	function wp_is_connector_registered( string $id ): bool {
-		return isset( $GLOBALS['__x402press_connectors'][ $id ] );
+		return isset( $GLOBALS['__x402_pay_connectors'][ $id ] );
 	}
 }
 if ( ! class_exists( 'WP_Term' ) ) {
@@ -702,15 +702,15 @@ if ( ! class_exists( 'WP_Term' ) ) {
 		}
 	}
 }
-$GLOBALS['__x402press_terms']           = array();
-$GLOBALS['__x402press_posts']           = array();
-$GLOBALS['__x402press_bloginfo']       = array();
-$GLOBALS['__x402press_existing_terms']  = array();
-$GLOBALS['__x402press_inserted_terms']  = array();
-$GLOBALS['__x402press_settings_errors'] = array();
-$GLOBALS['__x402press_enqueued_scripts'] = array();
-$GLOBALS['__x402press_localized_data']   = array();
-$GLOBALS['__x402press_response'] = array(
+$GLOBALS['__x402_pay_terms']           = array();
+$GLOBALS['__x402_pay_posts']           = array();
+$GLOBALS['__x402_pay_bloginfo']       = array();
+$GLOBALS['__x402_pay_existing_terms']  = array();
+$GLOBALS['__x402_pay_inserted_terms']  = array();
+$GLOBALS['__x402_pay_settings_errors'] = array();
+$GLOBALS['__x402_pay_enqueued_scripts'] = array();
+$GLOBALS['__x402_pay_localized_data']   = array();
+$GLOBALS['__x402_pay_response'] = array(
 	'status'  => 200,
 	'headers' => array(),
 	'body'    => null,
@@ -718,12 +718,12 @@ $GLOBALS['__x402press_response'] = array(
 );
 
 // Reset global state between tests.
-$GLOBALS['__x402press_options']     = array();
-$GLOBALS['__x402press_transients'] = array();
-$GLOBALS['__x402press_bloginfo']   = array();
-$GLOBALS['__x402press_filters']    = array();
-$GLOBALS['__x402press_actions']    = array();
-$GLOBALS['__x402press_http']       = null;
-$GLOBALS['__x402press_connectors'] = array();
-$GLOBALS['__x402press_jp']         = null;
-$GLOBALS['__x402press_jp_next']    = null;
+$GLOBALS['__x402_pay_options']     = array();
+$GLOBALS['__x402_pay_transients'] = array();
+$GLOBALS['__x402_pay_bloginfo']   = array();
+$GLOBALS['__x402_pay_filters']    = array();
+$GLOBALS['__x402_pay_actions']    = array();
+$GLOBALS['__x402_pay_http']       = null;
+$GLOBALS['__x402_pay_connectors'] = array();
+$GLOBALS['__x402_pay_jp']         = null;
+$GLOBALS['__x402_pay_jp_next']    = null;

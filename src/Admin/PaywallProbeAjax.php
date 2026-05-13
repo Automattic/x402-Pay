@@ -2,22 +2,22 @@
 /**
  * admin-ajax: paywall self-check descriptor for the stored settings row.
  *
- * @package X402Press
+ * @package X402Pay
  */
 
 declare(strict_types=1);
 
-namespace X402Press\Admin;
+namespace X402Pay\Admin;
 
-use X402Press\Settings\SettingsRepository;
+use X402Pay\Settings\SettingsRepository;
 
 /**
  * Lets the React UI fetch `{ probe }` without persisting (used by “Test paywall response”).
  */
 final class PaywallProbeAjax {
 
-	public const ACTION = 'x402press_paywall_probe';
-	public const NONCE  = 'x402press_paywall_probe_nonce';
+	public const ACTION = 'x402_pay_paywall_probe';
+	public const NONCE  = 'x402_pay_paywall_probe_nonce';
 
 	public function __construct( private readonly SettingsRepository $settings ) {}
 

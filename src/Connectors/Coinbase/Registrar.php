@@ -2,18 +2,18 @@
 /**
  * Registers the "Coinbase CDP" facilitator connector.
  *
- * @package X402Press
+ * @package X402Pay
  */
 
 declare(strict_types=1);
 
-namespace X402Press\Connectors\Coinbase;
+namespace X402Pay\Connectors\Coinbase;
 
-use X402Press\Connectors\ConnectorRegistry;
-use X402Press\Facilitator\Facilitator;
-use X402Press\Services\ConnectorCredentialStore;
-use X402Press\Services\X402FacilitatorClient;
-use X402Press\Settings\SettingsRepository;
+use X402Pay\Connectors\ConnectorRegistry;
+use X402Pay\Facilitator\Facilitator;
+use X402Pay\Services\ConnectorCredentialStore;
+use X402Pay\Services\X402FacilitatorClient;
+use X402Pay\Settings\SettingsRepository;
 
 /**
  * Registers `coinbase_cdp` — Base mainnet USDC settled through Coinbase CDP's
@@ -38,7 +38,7 @@ final class Registrar {
 	}
 
 	/**
-	 * `x402press_facilitator_for_connector` filter callback.
+	 * `x402_pay_facilitator_for_connector` filter callback.
 	 */
 	public function provide_facilitator( ?Facilitator $existing, string $id ): ?Facilitator {
 		if ( self::ID !== $id || null !== $existing ) {
@@ -53,7 +53,7 @@ final class Registrar {
 	}
 
 	/**
-	 * `x402press_connector_admin_meta` filter callback. Provides the
+	 * `x402_pay_connector_admin_meta` filter callback. Provides the
 	 * intro copy, docs link, placeholders, validation regex, and error
 	 * messages the admin UI shows when this connector is selected — so the
 	 * generic React app stays free of CDP-specific strings.

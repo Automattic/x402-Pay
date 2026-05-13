@@ -1,20 +1,20 @@
 <?php
 declare(strict_types=1);
 
-namespace X402Press\Tests\Unit\Facilitator;
+namespace X402Pay\Tests\Unit\Facilitator;
 
 use PHPUnit\Framework\TestCase;
-use X402Press\Connectors\ConnectorRegistry;
-use X402Press\Facilitator\Facilitator;
-use X402Press\Facilitator\FacilitatorResolver;
-use X402Press\Facilitator\TestResult;
-use X402Press\Services\FacilitatorProfile;
+use X402Pay\Connectors\ConnectorRegistry;
+use X402Pay\Facilitator\Facilitator;
+use X402Pay\Facilitator\FacilitatorResolver;
+use X402Pay\Facilitator\TestResult;
+use X402Pay\Services\FacilitatorProfile;
 
 final class FacilitatorResolverTest extends TestCase {
 
 	protected function setUp(): void {
-		$GLOBALS['__x402press_connectors'] = array();
-		$GLOBALS['__x402press_filters']    = array();
+		$GLOBALS['__x402_pay_connectors'] = array();
+		$GLOBALS['__x402_pay_filters']    = array();
 	}
 
 	public function test_returns_null_when_connector_not_registered(): void {
@@ -23,7 +23,7 @@ final class FacilitatorResolverTest extends TestCase {
 	}
 
 	public function test_returns_null_when_no_filter_claims_the_connector(): void {
-		$GLOBALS['__x402press_connectors']['orphan'] = array(
+		$GLOBALS['__x402_pay_connectors']['orphan'] = array(
 			'type' => ConnectorRegistry::FACILITATOR_TYPE,
 		);
 
@@ -32,7 +32,7 @@ final class FacilitatorResolverTest extends TestCase {
 	}
 
 	public function test_returns_facilitator_provided_by_filter(): void {
-		$GLOBALS['__x402press_connectors']['claimed'] = array(
+		$GLOBALS['__x402_pay_connectors']['claimed'] = array(
 			'type' => ConnectorRegistry::FACILITATOR_TYPE,
 		);
 		$fake = new class() implements Facilitator {

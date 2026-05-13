@@ -2,15 +2,15 @@
 /**
  * EdDSA JWT minter for Coinbase Developer Platform request authentication.
  *
- * @package X402Press
+ * @package X402Pay
  */
 
 declare(strict_types=1);
 
-namespace X402Press\Connectors\Coinbase;
+namespace X402Pay\Connectors\Coinbase;
 
 use RuntimeException;
-use X402Press\Facilitator\RequestSigner;
+use X402Pay\Facilitator\RequestSigner;
 
 /**
  * Mints a fresh, single-use bearer token for each call to a Coinbase CDP API.

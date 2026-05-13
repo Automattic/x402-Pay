@@ -2,14 +2,14 @@
 /**
  * Keeps the stored paywall category pointing at a live term.
  *
- * @package X402Press
+ * @package X402Pay
  */
 
 declare(strict_types=1);
 
-namespace X402Press\Services;
+namespace X402Pay\Services;
 
-use X402Press\Settings\SettingsRepository;
+use X402Pay\Settings\SettingsRepository;
 
 /**
  * Reacts to WordPress's `delete_term` action: if the deleted term is the one

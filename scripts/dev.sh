@@ -30,7 +30,7 @@ fi
 # installed a Jetpack companion plugin that has since been removed; if its
 # directory is still in the wp-now project store, plugins_loaded fatals
 # trying to call the missing class. Remove any stragglers.
-for stale in "${HOME}/.wp-now/wp-content/"*"/plugins/x402press-jetpack"; do
+for stale in "${HOME}/.wp-now/wp-content/"*"/plugins/x402-pay-jetpack"; do
   [[ -d "${stale}" ]] && rm -rf "${stale}" && echo "→ removed stale companion: ${stale}"
 done
 

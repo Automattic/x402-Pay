@@ -1,12 +1,12 @@
 <?php
 declare(strict_types=1);
 
-namespace X402Press\Tests\Unit;
+namespace X402Pay\Tests\Unit;
 
 use PHPUnit\Framework\TestCase;
-use X402Press\Admin\PaywallProbeAjax;
-use X402Press\Http\PaywallController;
-use X402Press\Settings\SettingsRepository;
+use X402Pay\Admin\PaywallProbeAjax;
+use X402Pay\Http\PaywallController;
+use X402Pay\Settings\SettingsRepository;
 
 final class PaywallProbeAjaxTest extends TestCase {
 
@@ -16,15 +16,15 @@ final class PaywallProbeAjaxTest extends TestCase {
 	}
 
 	protected function setUp(): void {
-		$GLOBALS['__x402press_options']           = array();
-		$GLOBALS['__x402press_json_success']      = null;
-		$GLOBALS['__x402press_get_posts_return']  = array( 11 );
-		$GLOBALS['__x402press_current_user_id']   = 1;
-		$GLOBALS['__x402press_current_user_caps'] = array( 'manage_options' );
+		$GLOBALS['__x402_pay_options']           = array();
+		$GLOBALS['__x402_pay_json_success']      = null;
+		$GLOBALS['__x402_pay_get_posts_return']  = array( 11 );
+		$GLOBALS['__x402_pay_current_user_id']   = 1;
+		$GLOBALS['__x402_pay_current_user_caps'] = array( 'manage_options' );
 	}
 
 	public function test_returns_probe_descriptor_from_stored_option(): void {
-		$GLOBALS['__x402press_options'][ SettingsRepository::OPTION_NAME ] = array(
+		$GLOBALS['__x402_pay_options'][ SettingsRepository::OPTION_NAME ] = array(
 			'paywall_mode'             => SettingsRepository::PAYWALL_MODE_CATEGORY,
 			'paywall_category_term_id' => 2,
 			'default_price'            => '0.01',
@@ -35,7 +35,7 @@ final class PaywallProbeAjaxTest extends TestCase {
 
 		( new PaywallProbeAjax( new SettingsRepository() ) )->handle();
 
-		$data = $GLOBALS['__x402press_json_success'];
+		$data = $GLOBALS['__x402_pay_json_success'];
 		$this->assertSame( 'https://example.test/p/11/', $data['probe']['url'] );
 		$this->assertSame(
 			wp_create_nonce( PaywallController::PROBE_NONCE_ACTION ),

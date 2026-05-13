@@ -2,12 +2,12 @@
 /**
  * Result of Facilitator::test_connection().
  *
- * @package X402Press
+ * @package X402Pay
  */
 
 declare(strict_types=1);
 
-namespace X402Press\Facilitator;
+namespace X402Pay\Facilitator;
 
 /**
  * Outcome of a facilitator health probe — "can we reach it at all?" — plus a

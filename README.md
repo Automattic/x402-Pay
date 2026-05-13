@@ -57,7 +57,7 @@ Renaming the category in settings does not relabel existing posts — reassign t
 
 ## Extending
 
-See the `x402press_rule_for_request` filter in `src/Services/RuleResolver.php`.
+See the `x402_pay_rule_for_request` filter in `src/Services/RuleResolver.php`.
 
 ## Facilitator connectors (WP 7.0+)
 
@@ -79,13 +79,13 @@ Publishing a facilitator is a two-step contract:
     } );
     ```
 
-2. **Provide the client** through the `x402press_facilitator_for_connector` filter. Since core strips unknown fields from the registration payload, x402-specific capabilities (endpoint URL, supported networks, fee-split support) are delivered here, not in the registration array. Returning a `Facilitator` instance for your connector ID is how the plugin learns how to call your backend.
+2. **Provide the client** through the `x402_pay_facilitator_for_connector` filter. Since core strips unknown fields from the registration payload, x402-specific capabilities (endpoint URL, supported networks, fee-split support) are delivered here, not in the registration array. Returning a `Facilitator` instance for your connector ID is how the plugin learns how to call your backend.
 
 ### Built-in connectors
 
-x402 Pay ships with two connectors out of the box: `x402press_test`, which routes through the public x402.org facilitator on Base Sepolia for testnet trials, and `coinbase_cdp`, which routes through Coinbase Developer Platform on Base mainnet (requires a CDP Secret API Key). Site owners pick one from the Facilitator dropdown in Settings → x402 Pay and enter a receiving wallet + price.
+x402 Pay ships with two connectors out of the box: `x402_pay_test`, which routes through the public x402.org facilitator on Base Sepolia for testnet trials, and `coinbase_cdp`, which routes through Coinbase Developer Platform on Base mainnet (requires a CDP Secret API Key). Site owners pick one from the Facilitator dropdown in Settings → x402 Pay and enter a receiving wallet + price.
 
-**Managed receiving address:** Extensions may filter `x402press_managed_pool_pay_to` so `payTo` bypasses the per-site wallet field. **Settlement reporting:** after a successful settle, the plugin fires `x402press_payment_settled` and may POST to a URL from the `x402press_ledger_report_url` filter (see `X402Press\Services\FacilitatorHooks`). The ledger (or any hook subscriber that persists externally) should de-duplicate on `transaction`; the plugin may deliver the same settlement more than once under retries or concurrency.
+**Managed receiving address:** Extensions may filter `x402_pay_managed_pool_pay_to` so `payTo` bypasses the per-site wallet field. **Settlement reporting:** after a successful settle, the plugin fires `x402_pay_payment_settled` and may POST to a URL from the `x402_pay_ledger_report_url` filter (see `X402Pay\Services\FacilitatorHooks`). The ledger (or any hook subscriber that persists externally) should de-duplicate on `transaction`; the plugin may deliver the same settlement more than once under retries or concurrency.
 
 ## External services
 

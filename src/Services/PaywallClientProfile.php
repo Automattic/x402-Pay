@@ -2,12 +2,12 @@
 /**
  * Paywall-oriented view of client HTTP signals (Phase A classifier).
  *
- * @package X402Press
+ * @package X402Pay
  */
 
 declare(strict_types=1);
 
-namespace X402Press\Services;
+namespace X402Pay\Services;
 
 /**
  * Pure classification of User-Agent plus fetch / Accept headers for paywall

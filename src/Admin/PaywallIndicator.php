@@ -2,17 +2,17 @@
 /**
  * Admin Bar indicator for paywalled frontend views.
  *
- * @package X402Press
+ * @package X402Pay
  */
 
 declare(strict_types=1);
 
-namespace X402Press\Admin;
+namespace X402Pay\Admin;
 
-use X402Press\Admin\SettingsPage;
-use X402Press\Services\DefaultPaywallRule;
-use X402Press\Services\RuleResolver;
-use X402Press\Settings\SettingsRepository;
+use X402Pay\Admin\SettingsPage;
+use X402Pay\Services\DefaultPaywallRule;
+use X402Pay\Services\RuleResolver;
+use X402Pay\Settings\SettingsRepository;
 
 /**
  * Adds a top admin-bar node when an admin is viewing a singular post in the
@@ -21,13 +21,13 @@ use X402Press\Settings\SettingsRepository;
  * The resolve context sets {@see DefaultPaywallRule::CTX_KEY_ADMIN_BAR_SCOPE}
  * so the admin bar can show in-scope posts even when audience is "only bots"
  * (human guests are not 402 in that case, but the editor still needs to see
- * which posts the plugin targets). {@see \X402Press\Http\PaywallController}
+ * which posts the plugin targets). {@see \X402Pay\Http\PaywallController}
  * does not set that key; real 402s are unchanged. The controller still applies
- * the `x402press_bypass_paywall` filter for the actual request.
+ * the `x402_pay_bypass_paywall` filter for the actual request.
  */
 final class PaywallIndicator {
 
-	public const NODE_ID = 'x402press-paywalled';
+	public const NODE_ID = 'x402-pay-paywalled';
 
 	public function __construct(
 		private readonly RuleResolver $rules,

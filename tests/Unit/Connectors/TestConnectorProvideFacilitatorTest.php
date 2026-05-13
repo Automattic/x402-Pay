@@ -1,14 +1,14 @@
 <?php
 declare(strict_types=1);
 
-namespace X402Press\Tests\Unit\Connectors;
+namespace X402Pay\Tests\Unit\Connectors;
 
 use PHPUnit\Framework\TestCase;
-use X402Press\Connectors\TestConnectorRegistrar;
-use X402Press\Facilitator\Facilitator;
-use X402Press\Facilitator\TestResult;
-use X402Press\Services\FacilitatorProfile;
-use X402Press\Services\X402FacilitatorClient;
+use X402Pay\Connectors\TestConnectorRegistrar;
+use X402Pay\Facilitator\Facilitator;
+use X402Pay\Facilitator\TestResult;
+use X402Pay\Services\FacilitatorProfile;
+use X402Pay\Services\X402FacilitatorClient;
 
 final class TestConnectorProvideFacilitatorTest extends TestCase {
 

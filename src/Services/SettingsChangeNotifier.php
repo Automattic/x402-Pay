@@ -2,14 +2,14 @@
 /**
  * Admin-facing notices for plugin settings changes.
  *
- * @package X402Press
+ * @package X402Pay
  */
 
 declare(strict_types=1);
 
-namespace X402Press\Services;
+namespace X402Pay\Services;
 
-use X402Press\Settings\SettingsRepository;
+use X402Pay\Settings\SettingsRepository;
 
 /**
  * Emits `add_settings_error` notices for settings events that benefit from an
@@ -24,7 +24,7 @@ final class SettingsChangeNotifier {
 	 */
 	public function notify_paywall_category_deleted( string $name ): void {
 		$this->emit(
-			'x402press_category_deleted',
+			'x402_pay_category_deleted',
 			'warning',
 			sprintf(
 				/* translators: %s: deleted paywall category name. */
@@ -39,7 +39,7 @@ final class SettingsChangeNotifier {
 	 */
 	public function notify_mode_switched_to_all_posts(): void {
 		$this->emit(
-			'x402press_all_posts_mode',
+			'x402_pay_all_posts_mode',
 			'info',
 			__( 'Every published post is now paywalled.', 'x402-pay' )
 		);

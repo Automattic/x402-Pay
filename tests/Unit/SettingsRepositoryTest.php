@@ -1,22 +1,22 @@
 <?php
 declare(strict_types=1);
 
-namespace X402Press\Tests\Unit;
+namespace X402Pay\Tests\Unit;
 
 use PHPUnit\Framework\TestCase;
-use X402Press\Http\PaywallController;
-use X402Press\Services\FacilitatorHooks;
-use X402Press\Settings\SettingsRepository;
+use X402Pay\Http\PaywallController;
+use X402Pay\Services\FacilitatorHooks;
+use X402Pay\Settings\SettingsRepository;
 
 final class SettingsRepositoryTest extends TestCase {
 
 	protected function setUp(): void {
-		$GLOBALS['__x402press_options']            = array();
-		$GLOBALS['__x402press_existing_terms']     = array();
-		$GLOBALS['__x402press_filters']            = array();
-		$GLOBALS['__x402press_settings_errors']    = array();
-		$GLOBALS['__x402press_get_posts_return']   = null;
-		$GLOBALS['__x402press_current_user_id']   = 0;
+		$GLOBALS['__x402_pay_options']            = array();
+		$GLOBALS['__x402_pay_existing_terms']     = array();
+		$GLOBALS['__x402_pay_filters']            = array();
+		$GLOBALS['__x402_pay_settings_errors']    = array();
+		$GLOBALS['__x402_pay_get_posts_return']   = null;
+		$GLOBALS['__x402_pay_current_user_id']   = 0;
 	}
 
 	public function test_defaults_when_nothing_stored(): void {
@@ -31,7 +31,7 @@ final class SettingsRepositoryTest extends TestCase {
 	}
 
 	public function test_getters_resanitise_direct_option_writes(): void {
-		$GLOBALS['__x402press_options'][ SettingsRepository::OPTION_NAME ] = array(
+		$GLOBALS['__x402_pay_options'][ SettingsRepository::OPTION_NAME ] = array(
 			'default_price'            => '<script>alert(1)</script>',
 			'selected_facilitator_id'  => 'Bad/Connector<script>',
 			'facilitators'             => array(
@@ -60,15 +60,15 @@ final class SettingsRepositoryTest extends TestCase {
 	}
 
 	public function test_wallet_address_resolves_to_the_active_facilitators_slot(): void {
-		$GLOBALS['__x402press_existing_terms'] = array(
+		$GLOBALS['__x402_pay_existing_terms'] = array(
 			array( 'term_id' => 7, 'name' => 'Premium', 'taxonomy' => 'category' ),
 		);
 		$repo = new SettingsRepository();
 		$repo->save(
 			array(
-				'selected_facilitator_id'  => 'x402press_test',
+				'selected_facilitator_id'  => 'x402_pay_test',
 				'facilitators'             => array(
-					'x402press_test' => array( 'wallet_address' => '0x1111111111111111111111111111111111111111' ),
+					'x402_pay_test' => array( 'wallet_address' => '0x1111111111111111111111111111111111111111' ),
 					'coinbase_cdp'     => array( 'wallet_address' => '0x2222222222222222222222222222222222222222' ),
 				),
 				'default_price'            => '0.25',
@@ -83,9 +83,9 @@ final class SettingsRepositoryTest extends TestCase {
 		$repo = new SettingsRepository();
 		$repo->save(
 			array(
-				'selected_facilitator_id' => 'x402press_test',
+				'selected_facilitator_id' => 'x402_pay_test',
 				'facilitators'            => array(
-					'x402press_test' => array( 'wallet_address' => '0x1111111111111111111111111111111111111111' ),
+					'x402_pay_test' => array( 'wallet_address' => '0x1111111111111111111111111111111111111111' ),
 					'coinbase_cdp'     => array( 'wallet_address' => '0x2222222222222222222222222222222222222222' ),
 				),
 			)
@@ -96,7 +96,7 @@ final class SettingsRepositoryTest extends TestCase {
 			array(
 				'selected_facilitator_id' => 'coinbase_cdp',
 				'facilitators'            => array(
-					'x402press_test' => array( 'wallet_address' => '0x1111111111111111111111111111111111111111' ),
+					'x402_pay_test' => array( 'wallet_address' => '0x1111111111111111111111111111111111111111' ),
 					'coinbase_cdp'     => array( 'wallet_address' => '0x2222222222222222222222222222222222222222' ),
 				),
 			)
@@ -108,9 +108,9 @@ final class SettingsRepositoryTest extends TestCase {
 		$repo = new SettingsRepository();
 		$repo->save(
 			array(
-				'selected_facilitator_id' => 'x402press_test',
+				'selected_facilitator_id' => 'x402_pay_test',
 				'facilitators'            => array(
-					'x402press_test' => array( 'wallet_address' => '0x1111111111111111111111111111111111111111' ),
+					'x402_pay_test' => array( 'wallet_address' => '0x1111111111111111111111111111111111111111' ),
 					'coinbase_cdp'     => array( 'wallet_address' => '0x2222222222222222222222222222222222222222' ),
 				),
 			)
@@ -175,7 +175,7 @@ final class SettingsRepositoryTest extends TestCase {
 	}
 
 	public function test_sanitize_keeps_valid_term_id(): void {
-		$GLOBALS['__x402press_existing_terms'] = array(
+		$GLOBALS['__x402_pay_existing_terms'] = array(
 			array( 'term_id' => 42, 'name' => 'Premium', 'taxonomy' => 'category' ),
 		);
 		$repo = new SettingsRepository();
@@ -184,10 +184,10 @@ final class SettingsRepositoryTest extends TestCase {
 	}
 
 	public function test_sanitize_falls_back_when_term_id_points_at_nothing(): void {
-		$GLOBALS['__x402press_existing_terms'] = array(
+		$GLOBALS['__x402_pay_existing_terms'] = array(
 			array( 'term_id' => 7, 'name' => 'Premium', 'taxonomy' => 'category' ),
 		);
-		$GLOBALS['__x402press_options'][ SettingsRepository::OPTION_NAME ] = array(
+		$GLOBALS['__x402_pay_options'][ SettingsRepository::OPTION_NAME ] = array(
 			'paywall_category_term_id' => 7,
 		);
 		$repo = new SettingsRepository();
@@ -196,11 +196,11 @@ final class SettingsRepositoryTest extends TestCase {
 	}
 
 	public function test_update_only_touches_keys_present_in_the_partial(): void {
-		$GLOBALS['__x402press_options'][ SettingsRepository::OPTION_NAME ] = array(
+		$GLOBALS['__x402_pay_options'][ SettingsRepository::OPTION_NAME ] = array(
 			'default_price'            => '0.05',
-			'selected_facilitator_id'  => 'x402press_test',
+			'selected_facilitator_id'  => 'x402_pay_test',
 			'facilitators'             => array(
-				'x402press_test' => array( 'wallet_address' => '0x1111111111111111111111111111111111111111' ),
+				'x402_pay_test' => array( 'wallet_address' => '0x1111111111111111111111111111111111111111' ),
 				'coinbase_cdp'     => array( 'wallet_address' => '0x2222222222222222222222222222222222222222' ),
 			),
 			'paywall_mode'             => 'category',
@@ -212,8 +212,8 @@ final class SettingsRepositoryTest extends TestCase {
 
 		$this->assertSame( '1.5', $merged['default_price'] );
 		// Everything else unchanged.
-		$this->assertSame( 'x402press_test', $merged['selected_facilitator_id'] );
-		$this->assertSame( '0x1111111111111111111111111111111111111111', $merged['facilitators']['x402press_test']['wallet_address'] );
+		$this->assertSame( 'x402_pay_test', $merged['selected_facilitator_id'] );
+		$this->assertSame( '0x1111111111111111111111111111111111111111', $merged['facilitators']['x402_pay_test']['wallet_address'] );
 		$this->assertSame( '0x2222222222222222222222222222222222222222', $merged['facilitators']['coinbase_cdp']['wallet_address'] );
 		$this->assertSame( 'category', $merged['paywall_mode'] );
 		$this->assertSame( 'bots', $merged['paywall_audience'] );
@@ -221,7 +221,7 @@ final class SettingsRepositoryTest extends TestCase {
 	}
 
 	public function test_update_resanitises_untouched_stored_fields_before_returning(): void {
-		$GLOBALS['__x402press_options'][ SettingsRepository::OPTION_NAME ] = array(
+		$GLOBALS['__x402_pay_options'][ SettingsRepository::OPTION_NAME ] = array(
 			'default_price'           => 'free',
 			'selected_facilitator_id' => 'Bad/Connector',
 			'paywall_mode'            => 'weird',
@@ -240,9 +240,9 @@ final class SettingsRepositoryTest extends TestCase {
 		// Simulate a stored option that picked up extra keys from a past
 		// schema or a bad external write. After update(), the merged row
 		// should only contain the sanitised shape.
-		$GLOBALS['__x402press_options'][ SettingsRepository::OPTION_NAME ] = array(
+		$GLOBALS['__x402_pay_options'][ SettingsRepository::OPTION_NAME ] = array(
 			'facilitators' => array(
-				'x402press_test' => array(
+				'x402_pay_test' => array(
 					'wallet_address'       => '0x3333333333333333333333333333333333333333',
 					'default_price'        => '0.01',       // retired field
 					'legacy_facilitator_url' => 'https://' , // unknown junk
@@ -264,7 +264,7 @@ final class SettingsRepositoryTest extends TestCase {
 				'wallet_address' => '0x3333333333333333333333333333333333333333',
 				'api_key_id'     => '',
 			),
-			$merged['facilitators']['x402press_test']
+			$merged['facilitators']['x402_pay_test']
 		);
 		// New slot also normalised.
 		$this->assertSame(
@@ -277,9 +277,9 @@ final class SettingsRepositoryTest extends TestCase {
 	}
 
 	public function test_update_merges_facilitator_slots_by_id(): void {
-		$GLOBALS['__x402press_options'][ SettingsRepository::OPTION_NAME ] = array(
+		$GLOBALS['__x402_pay_options'][ SettingsRepository::OPTION_NAME ] = array(
 			'facilitators' => array(
-				'x402press_test' => array( 'wallet_address' => '0x3333333333333333333333333333333333333333' ),
+				'x402_pay_test' => array( 'wallet_address' => '0x3333333333333333333333333333333333333333' ),
 				'coinbase_cdp'     => array( 'wallet_address' => '0x2222222222222222222222222222222222222222' ),
 			),
 		);
@@ -287,21 +287,21 @@ final class SettingsRepositoryTest extends TestCase {
 		$merged = ( new SettingsRepository() )->update(
 			array(
 				'facilitators' => array(
-					'x402press_test' => array( 'wallet_address' => '0x4444444444444444444444444444444444444444' ),
+					'x402_pay_test' => array( 'wallet_address' => '0x4444444444444444444444444444444444444444' ),
 				),
 			)
 		);
 
-		// x402press_test overwritten, coinbase_cdp preserved.
-		$this->assertSame( '0x4444444444444444444444444444444444444444', $merged['facilitators']['x402press_test']['wallet_address'] );
+		// x402_pay_test overwritten, coinbase_cdp preserved.
+		$this->assertSame( '0x4444444444444444444444444444444444444444', $merged['facilitators']['x402_pay_test']['wallet_address'] );
 		$this->assertSame( '0x2222222222222222222222222222222222222222', $merged['facilitators']['coinbase_cdp']['wallet_address'] );
 	}
 
 	public function test_update_leaves_invalid_term_id_alone_instead_of_clobbering(): void {
-		$GLOBALS['__x402press_existing_terms'] = array(
+		$GLOBALS['__x402_pay_existing_terms'] = array(
 			array( 'term_id' => 5, 'name' => 'Valid', 'taxonomy' => 'category' ),
 		);
-		$GLOBALS['__x402press_options'][ SettingsRepository::OPTION_NAME ] = array(
+		$GLOBALS['__x402_pay_options'][ SettingsRepository::OPTION_NAME ] = array(
 			'paywall_category_term_id' => 5,
 		);
 
@@ -310,10 +310,10 @@ final class SettingsRepositoryTest extends TestCase {
 	}
 
 	public function test_set_paywall_category_term_id_preserves_other_fields(): void {
-		$GLOBALS['__x402press_options'][ SettingsRepository::OPTION_NAME ] = array(
-			'selected_facilitator_id'  => 'x402press_test',
+		$GLOBALS['__x402_pay_options'][ SettingsRepository::OPTION_NAME ] = array(
+			'selected_facilitator_id'  => 'x402_pay_test',
 			'facilitators'             => array(
-				'x402press_test' => array( 'wallet_address' => '0x1111111111111111111111111111111111111111' ),
+				'x402_pay_test' => array( 'wallet_address' => '0x1111111111111111111111111111111111111111' ),
 			),
 			'default_price'            => '0.50',
 			'paywall_category_term_id' => 3,
@@ -323,7 +323,7 @@ final class SettingsRepositoryTest extends TestCase {
 		$this->assertSame( 99, $repo->paywall_category_term_id() );
 		$this->assertSame( '0x1111111111111111111111111111111111111111', $repo->wallet_address() );
 		$this->assertSame( '0.50', $repo->default_price() );
-		$this->assertSame( 'x402press_test', $repo->selected_facilitator_id() );
+		$this->assertSame( 'x402_pay_test', $repo->selected_facilitator_id() );
 	}
 
 	public function test_sample_paywalled_post_permalink_returns_null_for_mode_none(): void {
@@ -336,7 +336,7 @@ final class SettingsRepositoryTest extends TestCase {
 	}
 
 	public function test_sample_paywalled_post_permalink_returns_null_when_no_posts(): void {
-		$GLOBALS['__x402press_get_posts_return'] = array();
+		$GLOBALS['__x402_pay_get_posts_return'] = array();
 		$repo                                = new SettingsRepository();
 		$this->assertNull(
 			$repo->sample_paywalled_post_permalink(
@@ -349,7 +349,7 @@ final class SettingsRepositoryTest extends TestCase {
 	}
 
 	public function test_sample_paywalled_post_permalink_uses_first_matching_post_id(): void {
-		$GLOBALS['__x402press_get_posts_return'] = array( 42 );
+		$GLOBALS['__x402_pay_get_posts_return'] = array( 42 );
 		$repo                                = new SettingsRepository();
 		$this->assertSame(
 			'https://example.test/p/42/',
@@ -373,8 +373,8 @@ final class SettingsRepositoryTest extends TestCase {
 	}
 
 	public function test_build_paywall_probe_for_merged_row_includes_nonce_and_url(): void {
-		$GLOBALS['__x402press_get_posts_return'] = array( 9 );
-		$GLOBALS['__x402press_current_user_id']  = 1;
+		$GLOBALS['__x402_pay_get_posts_return'] = array( 9 );
+		$GLOBALS['__x402_pay_current_user_id']  = 1;
 		$repo                                = new SettingsRepository();
 		$out                                 = $repo->build_paywall_probe_for_merged_row(
 			array(
@@ -390,7 +390,7 @@ final class SettingsRepositoryTest extends TestCase {
 	}
 
 	public function test_build_paywall_probe_for_merged_row_no_matching_post(): void {
-		$GLOBALS['__x402press_get_posts_return'] = array();
+		$GLOBALS['__x402_pay_get_posts_return'] = array();
 		$repo                                = new SettingsRepository();
 		$this->assertSame(
 			array( 'probe' => array( 'reason' => 'no_matching_post' ) ),
@@ -425,7 +425,7 @@ final class SettingsRepositoryTest extends TestCase {
 		$merged = $repo->update(
 			array(
 				'facilitators' => array(
-					'x402press_test' => array(
+					'x402_pay_test' => array(
 						'wallet_address' => $long_blob,
 						'api_key_id'     => $long_blob,
 					),
@@ -433,7 +433,7 @@ final class SettingsRepositoryTest extends TestCase {
 			)
 		);
 
-		$slot = $merged['facilitators']['x402press_test'];
+		$slot = $merged['facilitators']['x402_pay_test'];
 		$this->assertSame( '', $slot['wallet_address'] );
 		$this->assertSame( SettingsRepository::MAX_SLOT_FIELD_BYTES, strlen( $slot['api_key_id'] ) );
 	}
@@ -443,27 +443,27 @@ final class SettingsRepositoryTest extends TestCase {
 		$merged = $repo->update(
 			array(
 				'facilitators' => array(
-					'x402press_test' => array( 'wallet_address' => '0xnot-a-wallet' ),
+					'x402_pay_test' => array( 'wallet_address' => '0xnot-a-wallet' ),
 				),
 			)
 		);
 
-		$this->assertSame( '', $merged['facilitators']['x402press_test']['wallet_address'] );
+		$this->assertSame( '', $merged['facilitators']['x402_pay_test']['wallet_address'] );
 	}
 
 	public function test_resolved_pay_to_prefers_managed_pool_from_filter(): void {
 		$repo = new SettingsRepository();
 		$repo->save(
 			array(
-				'selected_facilitator_id' => 'x402press_test',
+				'selected_facilitator_id' => 'x402_pay_test',
 				'facilitators'            => array(
-					'x402press_test' => array( 'wallet_address' => '0x1111111111111111111111111111111111111111' ),
+					'x402_pay_test' => array( 'wallet_address' => '0x1111111111111111111111111111111111111111' ),
 				),
 			)
 		);
 		add_filter(
 			FacilitatorHooks::MANAGED_POOL_PAY_TO,
-			static fn ( string $p, string $id ): string => 'x402press_test' === $id ? '0x9999999999999999999999999999999999999999' : $p,
+			static fn ( string $p, string $id ): string => 'x402_pay_test' === $id ? '0x9999999999999999999999999999999999999999' : $p,
 			10,
 			2
 		);

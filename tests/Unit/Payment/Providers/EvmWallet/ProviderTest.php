@@ -1,16 +1,16 @@
 <?php
 declare(strict_types=1);
 
-namespace X402Press\Tests\Unit\Payment\Providers\EvmWallet;
+namespace X402Pay\Tests\Unit\Payment\Providers\EvmWallet;
 
 use PHPUnit\Framework\TestCase;
-use X402Press\Payment\PaymentProviderRegistry;
-use X402Press\Payment\Providers\EvmWallet\Provider;
+use X402Pay\Payment\PaymentProviderRegistry;
+use X402Pay\Payment\Providers\EvmWallet\Provider;
 
 final class ProviderTest extends TestCase {
 
 	protected function setUp(): void {
-		$GLOBALS['__x402press_filters'] = array();
+		$GLOBALS['__x402_pay_filters'] = array();
 	}
 
 	public function test_register_adds_an_eligible_evm_wallet_descriptor(): void {

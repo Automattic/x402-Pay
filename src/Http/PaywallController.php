@@ -2,42 +2,42 @@
 /**
  * Orchestrates the paywall flow on template_redirect.
  *
- * @package X402Press
+ * @package X402Pay
  */
 
 declare(strict_types=1);
 
-namespace X402Press\Http;
+namespace X402Pay\Http;
 
-use X402Press\Facilitator\Facilitator;
-use X402Press\Facilitator\FacilitatorResolver;
-use X402Press\Payment\PaymentProviderRegistry;
-use X402Press\Services\GrantStore;
-use X402Press\Services\PaywallClientProfile;
-use X402Press\Services\PaymentRequirementsBuilder;
-use X402Press\Services\PaymentSettlementNotifier;
-use X402Press\Services\RuleResolver;
-use X402Press\Services\X402HeaderCodec;
-use X402Press\Settings\SettingsRepository;
+use X402Pay\Facilitator\Facilitator;
+use X402Pay\Facilitator\FacilitatorResolver;
+use X402Pay\Payment\PaymentProviderRegistry;
+use X402Pay\Services\GrantStore;
+use X402Pay\Services\PaywallClientProfile;
+use X402Pay\Services\PaymentRequirementsBuilder;
+use X402Pay\Services\PaymentSettlementNotifier;
+use X402Pay\Services\RuleResolver;
+use X402Pay\Services\X402HeaderCodec;
+use X402Pay\Settings\SettingsRepository;
 
 /**
  * Decides whether to serve, verify-then-serve, or reject with 402.
  *
  * The controller does not `echo` or `exit`; it only mutates a response
- * structure on $GLOBALS['__x402press_response']. The Plugin bootstrap is
+ * structure on $GLOBALS['__x402_pay_response']. The Plugin bootstrap is
  * responsible for echoing the body and exiting when `exited` is true.
  * This split keeps the controller unit-testable.
  */
 final class PaywallController {
 
-	public const BYPASS_HOOK = 'x402press_bypass_paywall';
+	public const BYPASS_HOOK = 'x402_pay_bypass_paywall';
 
 	/**
 	 * Fires after the paywall builds a {@see PaywallClientProfile} for this request
 	 * (non-bypassed path with a resolved facilitator). Filter must return a
 	 * PaywallClientProfile instance; other return types are ignored.
 	 */
-	public const CLIENT_PROFILE_FILTER = 'x402press_paywall_client_profile';
+	public const CLIENT_PROFILE_FILTER = 'x402_pay_paywall_client_profile';
 
 	/**
 	 * Filters the plain-text excerpt fragment embedded in HTML 402 responses.
@@ -46,7 +46,7 @@ final class PaywallController {
 	 * @param int    $post_id  Queried post ID from the paywall request.
 	 * @param array  $request  Full paywall request array.
 	 */
-	public const EXCERPT_TEXT_FILTER = 'x402press_paywall_excerpt_text';
+	public const EXCERPT_TEXT_FILTER = 'x402_pay_paywall_excerpt_text';
 
 	/**
 	 * Filters the full HTML document returned for HTML 402 responses.
@@ -57,10 +57,10 @@ final class PaywallController {
 	 * @param string $price         Human-readable price.
 	 * @param array  $body          Error payload merged into JSON path; same keys available here.
 	 */
-	public const HTML_402_BODY_FILTER = 'x402press_paywall_html_402_body';
+	public const HTML_402_BODY_FILTER = 'x402_pay_paywall_html_402_body';
 
 	/** Nonce action for {@see self::PROBE_HEADER} — settings probe drops admin bypass when valid. */
-	public const PROBE_NONCE_ACTION = 'x402press_paywall_probe';
+	public const PROBE_NONCE_ACTION = 'x402_pay_paywall_probe';
 
 	/** Request header carrying {@see self::PROBE_NONCE_ACTION} from the settings screen self-check. */
 	public const PROBE_HEADER = 'X-Simple-X402-Probe';
@@ -69,7 +69,7 @@ final class PaywallController {
 	public const GRANT_HEADER = 'X-Payment-Grant';
 
 	/** Cookie name used to redeem the grant on subsequent requests from a browser. */
-	public const GRANT_COOKIE = 'x402press_grant';
+	public const GRANT_COOKIE = 'x402_pay_grant';
 
 	/**
 	 * Lazily-resolved facilitator client + the builder that wraps its profile.
@@ -136,7 +136,7 @@ final class PaywallController {
 	 *   singular?:bool,
 	 *   headers:array<string,string>
 	 * } $request Request details. `headers` always includes `Accept`, `Sec-Fetch-Mode`, and
-	 *              `Sec-Fetch-Dest` when built by {@see \X402Press\Plugin::boot()} (empty string if absent).
+	 *              `Sec-Fetch-Dest` when built by {@see \X402Pay\Plugin::boot()} (empty string if absent).
 	 */
 	public function handle( array $request ): void {
 		$this->client_profile = null;
@@ -156,7 +156,7 @@ final class PaywallController {
 
 		// Administrators bypass by default so they can preview and manage
 		// paywalled content. Extenders can widen or narrow this via the
-		// `x402press_bypass_paywall` filter (e.g. let post editors through,
+		// `x402_pay_bypass_paywall` filter (e.g. let post editors through,
 		// or force admins to pay for audit reasons). A valid probe header
 		// forces the default to "do not bypass" so admins can self-test 402.
 		$default_bypass = current_user_can( 'manage_options' );
@@ -258,7 +258,7 @@ final class PaywallController {
 			)
 		);
 		if ( '' !== $receipt ) {
-			$GLOBALS['__x402press_response']['success_headers'][] = 'X-Payment-Response: ' . $receipt;
+			$GLOBALS['__x402_pay_response']['success_headers'][] = 'X-Payment-Response: ' . $receipt;
 		}
 
 		$this->settlement_notifier()->notify(
@@ -292,19 +292,19 @@ final class PaywallController {
 		status_header( 402 );
 
 		if ( $this->should_serve_html_402_body() ) {
-			$GLOBALS['__x402press_response']['headers']['Content-Type'] = 'text/html; charset=UTF-8';
-			$GLOBALS['__x402press_response']['body']                    = $this->build_html_402_body( $request, $requirements, $rule, $body );
+			$GLOBALS['__x402_pay_response']['headers']['Content-Type'] = 'text/html; charset=UTF-8';
+			$GLOBALS['__x402_pay_response']['body']                    = $this->build_html_402_body( $request, $requirements, $rule, $body );
 		} else {
-			$GLOBALS['__x402press_response']['headers']['Content-Type'] = 'application/json';
+			$GLOBALS['__x402_pay_response']['headers']['Content-Type'] = 'application/json';
 			// Array union (+): callers' keys can't override the spec-required envelope.
-			$GLOBALS['__x402press_response']['body'] = wp_json_encode(
+			$GLOBALS['__x402_pay_response']['body'] = wp_json_encode(
 				array(
 					'x402Version' => 1,
 					'accepts'     => array( $requirements ),
 				) + $body
 			);
 		}
-		$GLOBALS['__x402press_response']['exited'] = true;
+		$GLOBALS['__x402_pay_response']['exited'] = true;
 	}
 
 	/**
@@ -340,16 +340,16 @@ final class PaywallController {
 
 		$post_title    = $this->paywall_post_title( $post_id );
 		$title_block   = '' !== $post_title
-			? '<h2 class="x402press-title">' . esc_html( $post_title ) . '</h2>'
+			? '<h2 class="x402-pay-title">' . esc_html( $post_title ) . '</h2>'
 			: '';
 		$excerpt_block = '' !== $excerpt
-			? '<p class="x402press-excerpt">' . esc_html( $excerpt ) . '</p>'
+			? '<p class="x402-pay-excerpt">' . esc_html( $excerpt ) . '</p>'
 			: '';
 
 		$error_code    = isset( $body['error'] ) ? (string) $body['error'] : '';
 		$error_message = $this->error_message_for_visitor( $error_code );
 		$error_line    = '' !== $error_message
-			? '<p class="x402press-error" data-x402press-error="' . esc_attr( $error_code ) . '">'
+			? '<p class="x402-pay-error" data-x402-pay-error="' . esc_attr( $error_code ) . '">'
 				. esc_html( $error_message )
 				. '</p>'
 			: '';
@@ -357,15 +357,15 @@ final class PaywallController {
 		$providers_block = $this->payment_providers_block( $request, $requirements );
 		$hint_line       = '' !== $providers_block
 			? '' // The CTA replaces the developer-facing hint.
-			: '<p class="x402press-hint">'
+			: '<p class="x402-pay-hint">'
 				. esc_html__( 'x402 payment instructions are in the JSON response body (the spec-standard 402 envelope).', 'x402-pay' )
 				. '</p>';
 
-		$price_block = '<div class="x402press-price-card">'
-			. '<span class="x402press-price-label">'
+		$price_block = '<div class="x402-pay-price-card">'
+			. '<span class="x402-pay-price-label">'
 			. esc_html( $this->access_duration_label( $ttl ) )
 			. '</span>'
-			. '<span class="x402press-price-amount">'
+			. '<span class="x402-pay-price-amount">'
 			. esc_html(
 				/* translators: %s: USDC price (decimal string). */
 				sprintf( __( '%s USDC', 'x402-pay' ), $price )
@@ -380,10 +380,10 @@ final class PaywallController {
 			. esc_html__( 'Payment required', 'x402-pay' )
 			. '</title>'
 			. $this->html_402_styles()
-			. '</head><body><main class="x402press-card">'
+			. '</head><body><main class="x402-pay-card">'
 			. $site_block
-			. '<div class="x402press-headline">'
-			. '<p class="x402press-eyebrow">'
+			. '<div class="x402-pay-headline">'
+			. '<p class="x402-pay-eyebrow">'
 			. esc_html__( 'Payment required', 'x402-pay' )
 			. '</p>'
 			. $title_block
@@ -410,16 +410,16 @@ final class PaywallController {
 		}
 		$home      = function_exists( 'home_url' ) ? (string) home_url( '/' ) : '';
 		$icon      = '' !== $icon_url
-			? '<img class="x402press-site-icon" src="' . esc_url( $icon_url ) . '" alt="" width="20" height="20">'
+			? '<img class="x402-pay-site-icon" src="' . esc_url( $icon_url ) . '" alt="" width="20" height="20">'
 			: '';
 		$name_html = '' !== $name
-			? '<span class="x402press-site-name">' . esc_html( $name ) . '</span>'
+			? '<span class="x402-pay-site-name">' . esc_html( $name ) . '</span>'
 			: '';
 		$inner     = $icon . $name_html;
 		if ( '' !== $home ) {
-			return '<a class="x402press-site" href="' . esc_url( $home ) . '">' . $inner . '</a>';
+			return '<a class="x402-pay-site" href="' . esc_url( $home ) . '">' . $inner . '</a>';
 		}
-		return '<div class="x402press-site">' . $inner . '</div>';
+		return '<div class="x402-pay-site">' . $inner . '</div>';
 	}
 
 	/**
@@ -429,7 +429,7 @@ final class PaywallController {
 	 * the state, and rendering "payment_required" looks like an error to
 	 * a visitor who hasn't tried to pay yet.
 	 *
-	 * The raw `error_code` is still exposed via a `data-x402press-error`
+	 * The raw `error_code` is still exposed via a `data-x402-pay-error`
 	 * attribute on the rendered element so devtools / extensions can read
 	 * it without us cluttering the visible UI.
 	 */
@@ -514,7 +514,7 @@ final class PaywallController {
 
 	/**
 	 * Render the payment-provider buttons block. Each eligible provider gets a
-	 * `<div data-x402press-provider="…">` slot plus a `<script src="…">` tag; the
+	 * `<div data-x402-pay-provider="…">` slot plus a `<script src="…">` tag; the
 	 * host loader walks the slots once registrations are in. Returns an empty
 	 * string if no providers are eligible, so the controller falls back to the
 	 * developer-facing JSON-body hint.
@@ -560,7 +560,7 @@ final class PaywallController {
 			$context['providers'][ $id ] = array(
 				'config' => $provider['config'],
 			);
-			$slots                      .= '<div data-x402press-provider="' . esc_attr( $id ) . '"></div>';
+			$slots                      .= '<div data-x402-pay-provider="' . esc_attr( $id ) . '"></div>';
 			$script_tags                .= '<script defer src="' . esc_url( $provider['script_url'] ) . '"></script>'; // phpcs:ignore WordPress.WP.EnqueuedResources.NonEnqueuedScript -- The 402 body is a standalone response outside the theme enqueue lifecycle.
 		}
 
@@ -572,13 +572,13 @@ final class PaywallController {
 			return '';
 		}
 
-		$host_url       = plugins_url( 'src/Payment/loader.js', X402PRESS_FILE );
-		$context_script = '<script type="application/json" id="x402press-payment-context">' . $context_json . '</script>'; // phpcs:ignore WordPress.WP.EnqueuedResources.NonEnqueuedScript -- JSON data script for the standalone 402 response.
+		$host_url       = plugins_url( 'src/Payment/loader.js', X402_PAY_FILE );
+		$context_script = '<script type="application/json" id="x402-pay-payment-context">' . $context_json . '</script>'; // phpcs:ignore WordPress.WP.EnqueuedResources.NonEnqueuedScript -- JSON data script for the standalone 402 response.
 		$host_script    = '<script defer src="' . esc_url( $host_url ) . '"></script>'; // phpcs:ignore WordPress.WP.EnqueuedResources.NonEnqueuedScript -- The 402 body is a standalone response outside the theme enqueue lifecycle.
 
-		return '<div class="x402press-checkout">'
-			. '<div class="x402press-providers">' . $slots . '</div>'
-			. '<p class="x402press-status" id="x402press-status" role="status" aria-live="polite"></p>'
+		return '<div class="x402-pay-checkout">'
+			. '<div class="x402-pay-providers">' . $slots . '</div>'
+			. '<p class="x402-pay-status" id="x402-pay-status" role="status" aria-live="polite"></p>'
 			. $context_script
 			. $host_script
 			. $script_tags
@@ -597,14 +597,14 @@ final class PaywallController {
 		return <<<'CSS'
 <style>
 	:root {
-		--x402press-bg: #f5f5f4;
-		--x402press-surface: #ffffff;
-		--x402press-border: #e7e5e4;
-		--x402press-text: #1c1917;
-		--x402press-text-muted: #57534e;
-		--x402press-text-faint: #a8a29e;
-		--x402press-primary: #1c1917;
-		--x402press-primary-text: #fafaf9;
+		--x402-pay-bg: #f5f5f4;
+		--x402-pay-surface: #ffffff;
+		--x402-pay-border: #e7e5e4;
+		--x402-pay-text: #1c1917;
+		--x402-pay-text-muted: #57534e;
+		--x402-pay-text-faint: #a8a29e;
+		--x402-pay-primary: #1c1917;
+		--x402-pay-primary-text: #fafaf9;
 	}
 	* { box-sizing: border-box; }
 	html, body { margin: 0; padding: 0; }
@@ -612,85 +612,85 @@ final class PaywallController {
 		font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
 		font-size: 15px;
 		line-height: 1.55;
-		color: var(--x402press-text);
-		background: var(--x402press-bg);
+		color: var(--x402-pay-text);
+		background: var(--x402-pay-bg);
 		min-height: 100vh;
 		display: flex;
 		justify-content: center;
 		padding: 48px 16px;
 	}
-	.x402press-card {
+	.x402-pay-card {
 		width: 100%;
 		max-width: 440px;
-		background: var(--x402press-surface);
-		border: 1px solid var(--x402press-border);
+		background: var(--x402-pay-surface);
+		border: 1px solid var(--x402-pay-border);
 		border-radius: 12px;
 		padding: 28px 28px 24px;
 		box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
 	}
-	.x402press-site {
+	.x402-pay-site {
 		display: inline-flex;
 		align-items: center;
 		gap: 8px;
 		font-size: 13px;
 		font-weight: 500;
-		color: var(--x402press-text-muted);
+		color: var(--x402-pay-text-muted);
 		text-decoration: none;
 		margin-bottom: 24px;
 	}
-	a.x402press-site:hover { color: var(--x402press-text); }
-	.x402press-site-icon {
+	a.x402-pay-site:hover { color: var(--x402-pay-text); }
+	.x402-pay-site-icon {
 		width: 20px;
 		height: 20px;
 		border-radius: 4px;
 		display: block;
 	}
-	.x402press-headline { margin: 0 0 20px; }
-	.x402press-eyebrow {
+	.x402-pay-headline { margin: 0 0 20px; }
+	.x402-pay-eyebrow {
 		font-size: 11px;
 		font-weight: 600;
 		letter-spacing: 0.06em;
 		text-transform: uppercase;
-		color: var(--x402press-text-faint);
+		color: var(--x402-pay-text-faint);
 		margin: 0 0 8px;
 	}
-	.x402press-title {
+	.x402-pay-title {
 		font-size: 22px;
 		line-height: 1.3;
 		font-weight: 600;
 		margin: 0 0 12px;
-		color: var(--x402press-text);
+		color: var(--x402-pay-text);
 	}
-	.x402press-excerpt {
-		color: var(--x402press-text-muted);
+	.x402-pay-excerpt {
+		color: var(--x402-pay-text-muted);
 		margin: 0;
 		display: -webkit-box;
 		-webkit-line-clamp: 3;
 		-webkit-box-orient: vertical;
 		overflow: hidden;
 	}
-	.x402press-price-card {
+	.x402-pay-price-card {
 		display: flex;
 		align-items: baseline;
 		justify-content: space-between;
 		padding: 14px 16px;
-		border: 1px solid var(--x402press-border);
+		border: 1px solid var(--x402-pay-border);
 		border-radius: 8px;
 		margin-bottom: 16px;
-		background: var(--x402press-bg);
+		background: var(--x402-pay-bg);
 	}
-	.x402press-price-label {
+	.x402-pay-price-label {
 		font-size: 13px;
-		color: var(--x402press-text-muted);
+		color: var(--x402-pay-text-muted);
 	}
-	.x402press-price-amount {
+	.x402-pay-price-amount {
 		font-size: 16px;
 		font-weight: 600;
-		color: var(--x402press-text);
+		color: var(--x402-pay-text);
 		font-variant-numeric: tabular-nums;
 	}
-	.x402press-checkout { margin: 0; }
-	.x402press-providers {
+	.x402-pay-checkout { margin: 0; }
+	.x402-pay-providers {
 		display: flex;
 		flex-direction: column;
 		gap: 8px;
@@ -699,7 +699,7 @@ final class PaywallController {
 	   slot stacks detected wallets + a "or get a wallet" divider + install
 	   links). Reproduce the parent gap so spacing stays consistent
 	   regardless of slot child count. */
-	.x402press-providers > div {
+	.x402-pay-providers > div {
 		display: flex;
 		flex-direction: column;
 		gap: 8px;
@@ -708,7 +708,7 @@ final class PaywallController {
 	   its icon at the left and its name to the right. Equal weight across
 	   providers — no "primary" CTA so detected EIP-6963 wallets and the
 	   built-in providers all read the same. */
-	.x402press-pay-button {
+	.x402-pay-button {
 		display: flex;
 		align-items: center;
 		gap: 12px;
@@ -717,39 +717,39 @@ final class PaywallController {
 		font-size: 14px;
 		font-weight: 500;
 		padding: 12px 14px;
-		border: 1px solid var(--x402press-border);
+		border: 1px solid var(--x402-pay-border);
 		border-radius: 8px;
-		background: var(--x402press-surface);
-		color: var(--x402press-text);
+		background: var(--x402-pay-surface);
+		color: var(--x402-pay-text);
 		text-align: left;
 		cursor: pointer;
 		transition: border-color 0.15s ease, background 0.15s ease;
 	}
-	.x402press-pay-button:hover {
-		border-color: var(--x402press-text-faint);
-		background: var(--x402press-bg);
+	.x402-pay-button:hover {
+		border-color: var(--x402-pay-text-faint);
+		background: var(--x402-pay-bg);
 	}
-	.x402press-pay-button:active { background: var(--x402press-border); }
-	.x402press-pay-button:disabled { opacity: 0.5; cursor: not-allowed; }
-	.x402press-pay-icon {
+	.x402-pay-button:active { background: var(--x402-pay-border); }
+	.x402-pay-button:disabled { opacity: 0.5; cursor: not-allowed; }
+	.x402-pay-icon {
 		display: inline-flex;
 		flex-shrink: 0;
 		width: 24px;
 		height: 24px;
 	}
-	.x402press-pay-icon svg, .x402press-pay-icon img {
+	.x402-pay-icon svg, .x402-pay-icon img {
 		width: 100%;
 		height: 100%;
 		display: block;
 		border-radius: 6px;
 	}
-	.x402press-pay-label { flex: 1; }
+	.x402-pay-label { flex: 1; }
 	/* Trailing meta slot — currently only used by the install-link variant
 	   to render an "external link" arrow, but free for any provider that
 	   wants a small trailing affordance (e.g. "scan QR" badge). */
-	.x402press-pay-meta {
+	.x402-pay-meta {
 		flex-shrink: 0;
-		color: var(--x402press-text-faint);
+		color: var(--x402-pay-text-faint);
 		font-size: 13px;
 	}
 	/* Install-link variant — outbound link, not a payment action. Visually
@@ -757,15 +757,15 @@ final class PaywallController {
 	   is the wallet's real official SVG (bundled with the plugin), not a
 	   placeholder. text-decoration reset keeps anchor styles from leaking
 	   through. */
-	.x402press-pay-button--install {
+	.x402-pay-button--install {
 		padding: 10px 14px;
 		font-size: 13px;
 		text-decoration: none;
 	}
-	.x402press-pay-button--install .x402press-pay-label {
-		color: var(--x402press-text-muted);
+	.x402-pay-button--install .x402-pay-label {
+		color: var(--x402-pay-text-muted);
 	}
-	.x402press-pay-button--install .x402press-pay-icon {
+	.x402-pay-button--install .x402-pay-icon {
 		width: 20px;
 		height: 20px;
 	}
@@ -773,42 +773,42 @@ final class PaywallController {
 	   the EvmWallet provider has at least one suggested wallet that wasn't
 	   announced via EIP-6963. The flanking lines are pseudo-elements so
 	   the label sits centred. */
-	.x402press-section-divider {
+	.x402-pay-section-divider {
 		display: flex;
 		align-items: center;
 		gap: 12px;
-		color: var(--x402press-text-faint);
+		color: var(--x402-pay-text-faint);
 		font-size: 12px;
 		text-transform: uppercase;
 		letter-spacing: 0.06em;
 		margin: 4px 0;
 	}
-	.x402press-section-divider::before,
-	.x402press-section-divider::after {
+	.x402-pay-section-divider::before,
+	.x402-pay-section-divider::after {
 		content: '';
 		flex: 1;
 		height: 1px;
-		background: var(--x402press-border);
+		background: var(--x402-pay-border);
 	}
-	.x402press-status {
-		color: var(--x402press-text-muted);
+	.x402-pay-status {
+		color: var(--x402-pay-text-muted);
 		font-size: 13px;
 		margin: 12px 0 0;
 		text-align: center;
 	}
-	.x402press-hint {
-		color: var(--x402press-text-muted);
+	.x402-pay-hint {
+		color: var(--x402-pay-text-muted);
 		font-size: 12px;
 		margin: 16px 0 0;
 	}
-	.x402press-error {
-		color: var(--x402press-text);
+	.x402-pay-error {
+		color: var(--x402-pay-text);
 		font-size: 13px;
 		margin: 16px 0 0;
 		padding: 12px 14px;
-		border: 1px solid var(--x402press-border);
+		border: 1px solid var(--x402-pay-border);
 		border-radius: 8px;
-		background: var(--x402press-bg);
+		background: var(--x402-pay-bg);
 	}
 </style>
 CSS;
@@ -844,7 +844,7 @@ CSS;
 	/**
 	 * Extract the opaque grant token from either the request header (CLI /
 	 * scripts that capture the response header explicitly) or the
-	 * `x402press_grant` cookie (browsers, sent automatically once issued).
+	 * `x402_pay_grant` cookie (browsers, sent automatically once issued).
 	 *
 	 * @param array{headers:array<string,string>} $request
 	 */
@@ -886,7 +886,7 @@ CSS;
 
 	/**
 	 * Stage the response header + Set-Cookie for a freshly-issued grant on
-	 * the success-path response struct so {@see \X402Press\Plugin} can
+	 * the success-path response struct so {@see \X402Pay\Plugin} can
 	 * emit them before WordPress renders the page.
 	 *
 	 * The cookie is `Secure; HttpOnly; SameSite=Strict` and `Max-Age` matches
@@ -903,8 +903,8 @@ CSS;
 			max( $ttl, 0 ),
 			$cookie_path
 		);
-		$GLOBALS['__x402press_response']['success_headers'][] = self::GRANT_HEADER . ': ' . $token;
-		$GLOBALS['__x402press_response']['success_headers'][] = 'Set-Cookie: ' . $cookie;
+		$GLOBALS['__x402_pay_response']['success_headers'][] = self::GRANT_HEADER . ': ' . $token;
+		$GLOBALS['__x402_pay_response']['success_headers'][] = 'Set-Cookie: ' . $cookie;
 	}
 
 	private function sanitize_cookie_path( string $path ): string {

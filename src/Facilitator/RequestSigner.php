@@ -2,12 +2,12 @@
 /**
  * Per-request authentication primitive for facilitator HTTP calls.
  *
- * @package X402Press
+ * @package X402Pay
  */
 
 declare(strict_types=1);
 
-namespace X402Press\Facilitator;
+namespace X402Pay\Facilitator;
 
 /**
  * Returns the headers needed to authenticate one outbound request to a

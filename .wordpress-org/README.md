@@ -1,6 +1,6 @@
 # WordPress.org plugin directory artwork
 
-Files in this directory ship to the WP.org plugin directory's **SVN `/assets/`** path — NOT inside the plugin zip. They live in `https://plugins.svn.wordpress.org/x402press/assets/` and are referenced by the public listing page at `https://wordpress.org/plugins/x402press/`.
+Files in this directory ship to the WP.org plugin directory's **SVN `/assets/`** path — NOT inside the plugin zip. They live in `https://plugins.svn.wordpress.org/x402-pay/assets/` and are referenced by the public listing page at `https://wordpress.org/plugins/x402-pay/`.
 
 The directory in the plugin zip itself is `assets/` (built JS/CSS). Keep these two separate.
 
