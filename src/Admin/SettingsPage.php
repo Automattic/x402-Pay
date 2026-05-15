@@ -124,11 +124,17 @@ final class SettingsPage {
 			self::GROUP,
 			SettingsRepository::OPTION_NAME,
 			array(
-				'sanitize_callback' => fn ( $input ): array => $this->settings->sanitize(
-					is_array( $input ) ? $input : array()
-				),
+				'type'              => 'array',
+				'sanitize_callback' => array( $this, 'sanitize_settings' ),
 			)
 		);
+	}
+
+	/**
+	 * Sanitize the nested options payload submitted by WordPress settings.
+	 */
+	public function sanitize_settings( mixed $input ): array {
+		return $this->settings->sanitize( is_array( $input ) ? $input : array() );
 	}
 
 	/**

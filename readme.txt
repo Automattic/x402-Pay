@@ -1,5 +1,5 @@
 === x402 Pay ===
-Contributors: automattic
+Contributors: dufresnesteven, tellyworth
 Tags: paywall, x402, usdc, micropayments, http-402
 Requires at least: 7.0
 Tested up to: 7.0
@@ -44,6 +44,8 @@ Used by the default `x402.org (Test network)` connector.
 * What is sent: x402 PaymentRequirements (your receiving wallet address, amount, asset, network, resource URL) and the paying client's PaymentPayload (a signed USDC `transferWithAuthorization` authorization).
 * Why: to verify and settle the USDC payment on Base Sepolia.
 * Site: https://www.x402.org/
+* Terms of use: https://lfprojects.org/policies/terms-of-use/
+* Privacy policy: https://lfprojects.org/policies/privacy-policy/
 * This is a public testnet facilitator; do not use it for production paywalls.
 
 = Coinbase Developer Platform =
@@ -53,7 +55,7 @@ Used only when an admin selects the **Coinbase CDP** connector and saves an API 
 * Endpoint: `https://api.cdp.coinbase.com/platform/v2/x402/`
 * What is sent: the same x402 PaymentRequirements and PaymentPayload, plus a CDP-signed JWT proving the API key.
 * Why: to verify and settle the USDC payment on Base mainnet.
-* Terms of service: https://www.coinbase.com/legal/cloud
+* Terms of service: https://www.coinbase.com/legal/developer-platform/terms-of-service/
 * Privacy policy: https://www.coinbase.com/legal/privacy
 
 == Installation ==
