@@ -519,7 +519,7 @@ final class PaywallController {
 			return '';
 		}
 
-		return '<p class="x402-pay-hint">'
+		return '<p class="x402-pay-hint" data-x402-pay-fund-hint>'
 			. esc_html(
 				sprintf(
 					/* translators: 1: token name (e.g. USDC). 2: network name (e.g. Base, Base Sepolia). */
@@ -610,9 +610,30 @@ final class PaywallController {
 		$context_script = '<script type="application/json" id="x402-pay-payment-context">' . $context_json . '</script>'; // phpcs:ignore WordPress.WP.EnqueuedResources.NonEnqueuedScript -- JSON data script for the standalone 402 response.
 		$host_script    = '<script defer src="' . esc_url( $host_url ) . '"></script>'; // phpcs:ignore WordPress.WP.EnqueuedResources.NonEnqueuedScript -- The 402 body is a standalone response outside the theme enqueue lifecycle.
 
-		return '<div class="x402-pay-checkout">'
-			. '<div class="x402-pay-providers">' . $slots . '</div>'
+		$flow_block = '<div class="x402-pay-flow" data-x402-pay-flow hidden>'
+			. '<span class="x402-pay-spinner" aria-hidden="true"></span>'
 			. '<p class="x402-pay-status" id="x402-pay-status" role="status" aria-live="polite"></p>'
+			. '</div>';
+
+		$modal_title_id = 'x402-pay-modal-title';
+		$modal_block    = '<div class="x402-pay-modal" data-x402-pay-modal hidden'
+			. ' role="dialog" aria-modal="true" aria-labelledby="' . esc_attr( $modal_title_id ) . '">'
+			. '<div class="x402-pay-modal__backdrop" data-x402-pay-modal-close></div>'
+			. '<div class="x402-pay-modal__panel" role="document">'
+			. '<h2 id="' . esc_attr( $modal_title_id ) . '" class="x402-pay-modal__title">'
+			. esc_html__( 'Payment failed', 'x402-pay' )
+			. '</h2>'
+			. '<p class="x402-pay-modal__message" data-x402-pay-modal-message></p>'
+			. '<button type="button" class="x402-pay-modal__close" data-x402-pay-modal-close>'
+			. esc_html__( 'Close', 'x402-pay' )
+			. '</button>'
+			. '</div>'
+			. '</div>';
+
+		return '<div class="x402-pay-checkout">'
+			. '<div class="x402-pay-providers" data-x402-pay-providers>' . $slots . '</div>'
+			. $flow_block
+			. $modal_block
 			. $context_script
 			. $host_script
 			. $script_tags
@@ -824,11 +845,89 @@ final class PaywallController {
 		height: 1px;
 		background: var(--x402-pay-border);
 	}
-	.x402-pay-status {
-		color: var(--x402-pay-text-muted);
-		font-size: 13px;
-		margin: 12px 0 0;
+	[hidden] { display: none !important; }
+	.x402-pay-flow {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: 12px;
+		padding: 28px 16px;
+		border: 1px solid var(--x402-pay-border);
+		border-radius: 8px;
+		background: var(--x402-pay-bg);
 		text-align: center;
+	}
+	.x402-pay-spinner {
+		width: 22px;
+		height: 22px;
+		border-radius: 50%;
+		border: 2px solid var(--x402-pay-border);
+		border-top-color: var(--x402-pay-primary);
+		animation: x402-pay-spin 0.9s linear infinite;
+	}
+	@keyframes x402-pay-spin {
+		to { transform: rotate(360deg); }
+	}
+	@media (prefers-reduced-motion: reduce) {
+		.x402-pay-spinner { animation-duration: 3s; }
+	}
+	.x402-pay-status {
+		color: var(--x402-pay-text);
+		font-size: 14px;
+		margin: 0;
+	}
+	.x402-pay-modal {
+		position: fixed;
+		inset: 0;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		padding: 16px;
+		z-index: 2147483000;
+	}
+	.x402-pay-modal__backdrop {
+		position: absolute;
+		inset: 0;
+		background: rgba(28, 25, 23, 0.55);
+	}
+	.x402-pay-modal__panel {
+		position: relative;
+		width: 100%;
+		max-width: 380px;
+		background: var(--x402-pay-surface);
+		border: 1px solid var(--x402-pay-border);
+		border-radius: 12px;
+		padding: 24px;
+		box-shadow: 0 12px 40px rgba(0, 0, 0, 0.18);
+	}
+	.x402-pay-modal__title {
+		font-size: 16px;
+		font-weight: 600;
+		margin: 0 0 8px;
+		color: var(--x402-pay-text);
+	}
+	.x402-pay-modal__message {
+		color: var(--x402-pay-text-muted);
+		font-size: 14px;
+		margin: 0 0 20px;
+		word-break: break-word;
+	}
+	.x402-pay-modal__close {
+		font: inherit;
+		font-size: 14px;
+		font-weight: 500;
+		padding: 10px 16px;
+		border: 1px solid var(--x402-pay-primary);
+		border-radius: 8px;
+		background: var(--x402-pay-primary);
+		color: var(--x402-pay-primary-text);
+		cursor: pointer;
+		min-width: 96px;
+	}
+	.x402-pay-modal__close:hover { opacity: 0.92; }
+	.x402-pay-modal__close:focus-visible {
+		outline: 2px solid var(--x402-pay-primary);
+		outline-offset: 2px;
 	}
 	.x402-pay-hint {
 		color: var(--x402-pay-text-muted);

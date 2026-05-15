@@ -219,9 +219,13 @@
 		async function payWith( announce, button ) {
 			var info = announce.info || {};
 			var provider = announce.provider;
+			var walletName = info.name || 'your wallet';
 
-			button.disabled = true;
-			host.setStatus( 'Connecting to ' + ( info.name || 'wallet' ) + '…' );
+			// Re-enable the button optimistically; the buttons block is
+			// hidden while the flow is active, and re-shown on modal dismiss
+			// so a retry with the same wallet finds the row clickable again.
+			button.disabled = false;
+			host.beginFlow( 'Connecting to ' + walletName + '…' );
 
 			try {
 				var accounts = await provider.request( { method: 'eth_requestAccounts' } );
@@ -234,10 +238,10 @@
 					provider,
 					host.requirements,
 					host.setStatus,
-					info.name || 'your wallet'
+					walletName
 				);
 
-				host.setStatus( 'Sign the payment in ' + ( info.name || 'your wallet' ) + '…' );
+				host.setStatus( 'Sign the payment in ' + walletName + '…' );
 				var built = buildTypedData( host.requirements, from );
 
 				var signature = await provider.request( {
@@ -263,12 +267,18 @@
 					},
 				} );
 			} catch ( e ) {
+				// host.retry surfaces its own modal on settlement failure and
+				// then rethrows. If the modal is already up, leave it alone —
+				// overwriting it with a connect-time message would be wrong.
+				var modal = document.querySelector( '[data-x402-pay-modal]' );
+				if ( modal && ! modal.hidden ) {
+					return;
+				}
 				var code = walletErrorCode( e );
 				var message = ( 4001 === code )
-					? 'wallet request was rejected'
-					: ( ( e && e.message ) || 'unknown error' );
-				host.setStatus( 'Payment cancelled: ' + message );
-				button.disabled = false;
+					? 'You declined the request in ' + walletName + '.'
+					: ( ( e && e.message ) || 'Unknown error' );
+				host.showError( message );
 			}
 		}
 
