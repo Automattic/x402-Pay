@@ -96,6 +96,10 @@ The plugin talks to two external facilitator endpoints, and only when a request 
 
 ## Changelog
 
+### 0.1.1
+
+- Paywall page swaps the wallet buttons for a single live status message during a payment, and surfaces wallet rejections / settlement failures in a dismissible modal.
+
 ### 0.1.0
 
 - Initial MVP: paywall posts by category (configurable) or gate all posts for humans; gate singular views for detected bots/crawlers; pay with x402 on Base Sepolia via x402.org.

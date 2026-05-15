@@ -4,7 +4,7 @@ Tags: paywall, x402, usdc, micropayments, http-402
 Requires at least: 7.0
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 0.1.0
+Stable tag: 0.1.1
 License: GPLv3 or later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 
@@ -98,6 +98,9 @@ The admin UI is built from `assets/src/index.jsx` via `npm run build`; the bundl
 3. The paywall page a human reader sees, with pay buttons for popular wallets.
 
 == Changelog ==
+
+= 0.1.1 =
+* Paywall page now swaps the wallet buttons for a single live status message while a payment is in progress, and surfaces wallet rejections or settlement failures in a dismissible modal so visitors can retry.
 
 = 0.1.0 =
 * Initial release: paywall posts by category or all posts; gate humans, bots, or both; verify and settle USDC payments via x402.org on Base Sepolia or Coinbase CDP on Base mainnet.
