@@ -68,6 +68,17 @@ final class PluginHeadersTest extends TestCase {
 		}
 	}
 
+	public function test_current_user_agent_unslashes_and_sanitizes_server_value(): void {
+		$_SERVER['HTTP_USER_AGENT'] = 'Mozilla <b>Googlebot</b>';
+
+		$reflection = new \ReflectionMethod( Plugin::class, 'current_user_agent' );
+		$reflection->setAccessible( true );
+
+		$this->assertSame( 'Mozilla Googlebot', $reflection->invoke( null ) );
+
+		unset( $_SERVER['HTTP_USER_AGENT'] );
+	}
+
 	/** @var list<string> */
 	private const ACCEPT_SEC_FETCH_SERVER_KEYS = array(
 		'HTTP_ACCEPT',

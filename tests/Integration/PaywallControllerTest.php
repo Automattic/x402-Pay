@@ -343,6 +343,15 @@ final class PaywallControllerTest extends TestCase {
 		$this->assertFalse( $GLOBALS['x402_pay_response']['exited'] );
 	}
 
+	public function test_grant_cookie_token_is_unslashed_and_sanitized(): void {
+		$_COOKIE[ PaywallController::GRANT_COOKIE ] = '<script>alert(1)</script>';
+
+		$reflection = new \ReflectionMethod( PaywallController::class, 'extract_grant_token' );
+		$reflection->setAccessible( true );
+
+		$this->assertSame( '', $reflection->invoke( $this->controller(), array( 'headers' => array() ) ) );
+	}
+
 	public function test_wallet_address_header_alone_no_longer_bypasses(): void {
 		// Pre-fix: sending X-Wallet-Address with the paying wallet was enough
 		// to redeem the grant for that path. Wallet addresses are public, so

@@ -883,15 +883,25 @@ CSS;
 	 * @param array{headers:array<string,string>} $request
 	 */
 	private function extract_grant_token( array $request ): string {
-		$header = (string) ( $request['headers'][ self::GRANT_HEADER ] ?? '' );
+		$header = $this->sanitize_grant_token( $request['headers'][ self::GRANT_HEADER ] ?? '' );
 		if ( '' !== $header ) {
 			return $header;
 		}
 		// $_COOKIE is the only authoritative source — Plugin::collect_headers
 		// doesn't fold cookies into the request shape (and shouldn't: cookies
 		// have their own semantics).
-		$raw = $_COOKIE[ self::GRANT_COOKIE ] ?? '';
-		return is_string( $raw ) ? (string) wp_unslash( $raw ) : '';
+		if ( ! isset( $_COOKIE[ self::GRANT_COOKIE ] ) || ! is_string( $_COOKIE[ self::GRANT_COOKIE ] ) ) {
+			return '';
+		}
+		return $this->sanitize_grant_token( (string) wp_unslash( $_COOKIE[ self::GRANT_COOKIE ] ) );
+	}
+
+	/**
+	 * Sanitize grant bearer tokens. Issued tokens are lowercase 64-char hex.
+	 */
+	private function sanitize_grant_token( mixed $token ): string {
+		$token = sanitize_text_field( (string) $token );
+		return preg_match( '/\A[a-f0-9]{64}\z/', $token ) ? $token : '';
 	}
 
 	/**

@@ -224,7 +224,7 @@ final class Plugin {
 	 */
 	private static function current_user_agent(): string {
 		return isset( $_SERVER['HTTP_USER_AGENT'] )
-			? (string) wp_unslash( $_SERVER['HTTP_USER_AGENT'] )
+			? sanitize_text_field( (string) wp_unslash( $_SERVER['HTTP_USER_AGENT'] ) )
 			: '';
 	}
 
