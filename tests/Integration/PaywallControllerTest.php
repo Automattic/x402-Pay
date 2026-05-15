@@ -47,7 +47,7 @@ final class PaywallControllerTest extends TestCase {
 			10,
 			2
 		);
-		$GLOBALS['__x402_pay_response']          = array(
+		$GLOBALS['x402_pay_response']          = array(
 			'status'          => 200,
 			'headers'         => array(),
 			'success_headers' => array(),
@@ -77,9 +77,9 @@ final class PaywallControllerTest extends TestCase {
 	 * @return array Decoded body for callers that want to inspect specific keys.
 	 */
 	private function assert_402_envelope(): array {
-		$ct = (string) ( $GLOBALS['__x402_pay_response']['headers']['Content-Type'] ?? '' );
+		$ct = (string) ( $GLOBALS['x402_pay_response']['headers']['Content-Type'] ?? '' );
 		$this->assertStringContainsString( 'application/json', $ct );
-		$body = json_decode( (string) $GLOBALS['__x402_pay_response']['body'], true );
+		$body = json_decode( (string) $GLOBALS['x402_pay_response']['body'], true );
 		$this->assertIsArray( $body );
 		$this->assertSame( 1, $body['x402Version'] );
 		$this->assertIsArray( $body['accepts'] );
@@ -96,8 +96,8 @@ final class PaywallControllerTest extends TestCase {
 				'headers' => array(),
 			)
 		);
-		$this->assertSame( 200, $GLOBALS['__x402_pay_response']['status'] );
-		$this->assertFalse( $GLOBALS['__x402_pay_response']['exited'] );
+		$this->assertSame( 200, $GLOBALS['x402_pay_response']['status'] );
+		$this->assertFalse( $GLOBALS['x402_pay_response']['exited'] );
 	}
 
 	public function test_passes_singular_flag_to_rule_filter(): void {
@@ -161,8 +161,8 @@ final class PaywallControllerTest extends TestCase {
 		$this->assertTrue( $captured->is_bot );
 		$this->assertTrue( $captured->document_navigation_intent );
 		$this->assertTrue( $captured->json_accept_intent );
-		$this->assertSame( 402, $GLOBALS['__x402_pay_response']['status'] );
-		$ct = (string) ( $GLOBALS['__x402_pay_response']['headers']['Content-Type'] ?? '' );
+		$this->assertSame( 402, $GLOBALS['x402_pay_response']['status'] );
+		$ct = (string) ( $GLOBALS['x402_pay_response']['headers']['Content-Type'] ?? '' );
 		$this->assertStringContainsString( 'text/html', $ct, 'Document navigation intent overrides JSON Accept for 402 body shape.' );
 	}
 
@@ -178,15 +178,15 @@ final class PaywallControllerTest extends TestCase {
 			)
 		);
 
-		$this->assertSame( 402, $GLOBALS['__x402_pay_response']['status'] );
+		$this->assertSame( 402, $GLOBALS['x402_pay_response']['status'] );
 		$body = $this->assert_402_envelope();
 		// PaymentRequirements live inside the spec envelope, not in a separate header.
 		$this->assertSame( '0x1111111111111111111111111111111111111111', $body['accepts'][0]['payTo'] );
 		$this->assertSame( '10000', $body['accepts'][0]['maxAmountRequired'] );
 		$this->assertSame( 'payment_required', $body['error'] );
 		// Spec response carries no `payment-required` header — everything is in the JSON body.
-		$this->assertArrayNotHasKey( 'PAYMENT-REQUIRED', $GLOBALS['__x402_pay_response']['headers'] );
-		$this->assertTrue( $GLOBALS['__x402_pay_response']['exited'] );
+		$this->assertArrayNotHasKey( 'PAYMENT-REQUIRED', $GLOBALS['x402_pay_response']['headers'] );
+		$this->assertTrue( $GLOBALS['x402_pay_response']['exited'] );
 	}
 
 	public function test_administrator_bypasses_paywall(): void {
@@ -202,8 +202,8 @@ final class PaywallControllerTest extends TestCase {
 			)
 		);
 
-		$this->assertSame( 200, $GLOBALS['__x402_pay_response']['status'] );
-		$this->assertFalse( $GLOBALS['__x402_pay_response']['exited'] );
+		$this->assertSame( 200, $GLOBALS['x402_pay_response']['status'] );
+		$this->assertFalse( $GLOBALS['x402_pay_response']['exited'] );
 	}
 
 	public function test_valid_paywall_probe_header_overrides_admin_bypass(): void {
@@ -221,8 +221,8 @@ final class PaywallControllerTest extends TestCase {
 			)
 		);
 
-		$this->assertSame( 402, $GLOBALS['__x402_pay_response']['status'] );
-		$this->assertTrue( $GLOBALS['__x402_pay_response']['exited'] );
+		$this->assertSame( 402, $GLOBALS['x402_pay_response']['status'] );
+		$this->assertTrue( $GLOBALS['x402_pay_response']['exited'] );
 	}
 
 	public function test_invalid_probe_nonce_admin_still_bypasses(): void {
@@ -238,8 +238,8 @@ final class PaywallControllerTest extends TestCase {
 			)
 		);
 
-		$this->assertSame( 200, $GLOBALS['__x402_pay_response']['status'] );
-		$this->assertFalse( $GLOBALS['__x402_pay_response']['exited'] );
+		$this->assertSame( 200, $GLOBALS['x402_pay_response']['status'] );
+		$this->assertFalse( $GLOBALS['x402_pay_response']['exited'] );
 	}
 
 	public function test_bypass_filter_can_widen_to_non_admin(): void {
@@ -255,8 +255,8 @@ final class PaywallControllerTest extends TestCase {
 			)
 		);
 
-		$this->assertSame( 200, $GLOBALS['__x402_pay_response']['status'] );
-		$this->assertFalse( $GLOBALS['__x402_pay_response']['exited'] );
+		$this->assertSame( 200, $GLOBALS['x402_pay_response']['status'] );
+		$this->assertFalse( $GLOBALS['x402_pay_response']['exited'] );
 	}
 
 	public function test_bypass_filter_can_override_admin_default(): void {
@@ -273,8 +273,8 @@ final class PaywallControllerTest extends TestCase {
 			)
 		);
 
-		$this->assertSame( 402, $GLOBALS['__x402_pay_response']['status'] );
-		$this->assertTrue( $GLOBALS['__x402_pay_response']['exited'] );
+		$this->assertSame( 402, $GLOBALS['x402_pay_response']['status'] );
+		$this->assertTrue( $GLOBALS['x402_pay_response']['exited'] );
 	}
 
 	public function test_bypass_filter_receives_request_and_rule(): void {
@@ -321,8 +321,8 @@ final class PaywallControllerTest extends TestCase {
 			)
 		);
 
-		$this->assertSame( 200, $GLOBALS['__x402_pay_response']['status'] );
-		$this->assertFalse( $GLOBALS['__x402_pay_response']['exited'] );
+		$this->assertSame( 200, $GLOBALS['x402_pay_response']['status'] );
+		$this->assertFalse( $GLOBALS['x402_pay_response']['exited'] );
 	}
 
 	public function test_allows_request_with_live_grant_via_cookie(): void {
@@ -339,8 +339,8 @@ final class PaywallControllerTest extends TestCase {
 			)
 		);
 
-		$this->assertSame( 200, $GLOBALS['__x402_pay_response']['status'] );
-		$this->assertFalse( $GLOBALS['__x402_pay_response']['exited'] );
+		$this->assertSame( 200, $GLOBALS['x402_pay_response']['status'] );
+		$this->assertFalse( $GLOBALS['x402_pay_response']['exited'] );
 	}
 
 	public function test_wallet_address_header_alone_no_longer_bypasses(): void {
@@ -359,7 +359,7 @@ final class PaywallControllerTest extends TestCase {
 			)
 		);
 
-		$this->assertSame( 402, $GLOBALS['__x402_pay_response']['status'] );
+		$this->assertSame( 402, $GLOBALS['x402_pay_response']['status'] );
 	}
 
 	public function test_token_for_one_path_does_not_redeem_against_another(): void {
@@ -375,7 +375,7 @@ final class PaywallControllerTest extends TestCase {
 			)
 		);
 
-		$this->assertSame( 402, $GLOBALS['__x402_pay_response']['status'] );
+		$this->assertSame( 402, $GLOBALS['x402_pay_response']['status'] );
 	}
 
 	public function test_token_for_one_query_resource_does_not_redeem_against_another(): void {
@@ -392,7 +392,7 @@ final class PaywallControllerTest extends TestCase {
 			)
 		);
 
-		$this->assertSame( 402, $GLOBALS['__x402_pay_response']['status'] );
+		$this->assertSame( 402, $GLOBALS['x402_pay_response']['status'] );
 		$body = $this->assert_402_envelope();
 		$this->assertSame( 'https://example.test/?p=2', $body['accepts'][0]['resource'] );
 	}
@@ -410,8 +410,8 @@ final class PaywallControllerTest extends TestCase {
 			)
 		);
 
-		$this->assertSame( 200, $GLOBALS['__x402_pay_response']['status'] );
-		$this->assertFalse( $GLOBALS['__x402_pay_response']['exited'] );
+		$this->assertSame( 200, $GLOBALS['x402_pay_response']['status'] );
+		$this->assertFalse( $GLOBALS['x402_pay_response']['exited'] );
 	}
 
 	public function test_client_profile_filter_not_invoked_when_grant_short_circuits(): void {
@@ -439,7 +439,7 @@ final class PaywallControllerTest extends TestCase {
 		);
 
 		$this->assertSame( 0, $filter_runs, 'Classifier and filter should not run when an existing grant bypasses enforcement.' );
-		$this->assertSame( 200, $GLOBALS['__x402_pay_response']['status'] );
+		$this->assertSame( 200, $GLOBALS['x402_pay_response']['status'] );
 	}
 
 	public function test_requirements_use_managed_pool_pay_to_when_filter_returns_address(): void {
@@ -462,7 +462,7 @@ final class PaywallControllerTest extends TestCase {
 			)
 		);
 
-		$this->assertSame( 402, $GLOBALS['__x402_pay_response']['status'] );
+		$this->assertSame( 402, $GLOBALS['x402_pay_response']['status'] );
 		$body = $this->assert_402_envelope();
 		$this->assertSame( '0x1111111111111111111111111111111111111111', $body['accepts'][0]['payTo'] );
 	}
@@ -506,9 +506,9 @@ final class PaywallControllerTest extends TestCase {
 			)
 		);
 
-		$this->assertSame( 200, $GLOBALS['__x402_pay_response']['status'] );
+		$this->assertSame( 200, $GLOBALS['x402_pay_response']['status'] );
 
-		$success_headers = $GLOBALS['__x402_pay_response']['success_headers'];
+		$success_headers = $GLOBALS['x402_pay_response']['success_headers'];
 		$grant_line      = self::find_header_line( $success_headers, PaywallController::GRANT_HEADER . ': ' );
 		$cookie_line     = self::find_header_line( $success_headers, 'Set-Cookie: ' . PaywallController::GRANT_COOKIE . '=' );
 		$this->assertNotNull( $grant_line, 'X-Payment-Grant header must be staged on the success path.' );
@@ -568,7 +568,7 @@ final class PaywallControllerTest extends TestCase {
 		);
 
 		$line = self::find_header_line(
-			$GLOBALS['__x402_pay_response']['success_headers'],
+			$GLOBALS['x402_pay_response']['success_headers'],
 			'X-Payment-Response: '
 		);
 		$this->assertNotNull( $line, 'Spec-required X-Payment-Response settlement receipt must be staged.' );
@@ -622,7 +622,7 @@ final class PaywallControllerTest extends TestCase {
 		);
 
 		$cookie_line = self::find_header_line(
-			$GLOBALS['__x402_pay_response']['success_headers'],
+			$GLOBALS['x402_pay_response']['success_headers'],
 			'Set-Cookie: ' . PaywallController::GRANT_COOKIE . '='
 		);
 
@@ -722,10 +722,10 @@ final class PaywallControllerTest extends TestCase {
 			)
 		);
 
-		$this->assertSame( 402, $GLOBALS['__x402_pay_response']['status'] );
+		$this->assertSame( 402, $GLOBALS['x402_pay_response']['status'] );
 		$body = $this->assert_402_envelope();
 		$this->assertSame( 'verify_failed', $body['error'] );
-		$this->assertTrue( $GLOBALS['__x402_pay_response']['exited'] );
+		$this->assertTrue( $GLOBALS['x402_pay_response']['exited'] );
 	}
 
 	public function test_invalid_signature_header_responds_402_with_price(): void {
@@ -740,10 +740,10 @@ final class PaywallControllerTest extends TestCase {
 			)
 		);
 
-		$this->assertSame( 402, $GLOBALS['__x402_pay_response']['status'] );
+		$this->assertSame( 402, $GLOBALS['x402_pay_response']['status'] );
 		$body = $this->assert_402_envelope();
 		$this->assertSame( 'invalid_signature_header', $body['error'] );
-		$this->assertTrue( $GLOBALS['__x402_pay_response']['exited'] );
+		$this->assertTrue( $GLOBALS['x402_pay_response']['exited'] );
 	}
 
 	public function test_settle_failure_responds_402_with_price(): void {
@@ -776,10 +776,10 @@ final class PaywallControllerTest extends TestCase {
 			)
 		);
 
-		$this->assertSame( 402, $GLOBALS['__x402_pay_response']['status'] );
+		$this->assertSame( 402, $GLOBALS['x402_pay_response']['status'] );
 		$body = $this->assert_402_envelope();
 		$this->assertSame( 'settle_failed', $body['error'] );
-		$this->assertTrue( $GLOBALS['__x402_pay_response']['exited'] );
+		$this->assertTrue( $GLOBALS['x402_pay_response']['exited'] );
 	}
 
 	public function test_bot_json_accept_without_document_navigation_serves_json_402(): void {
@@ -798,7 +798,7 @@ final class PaywallControllerTest extends TestCase {
 				),
 			)
 		);
-		$this->assertSame( 402, $GLOBALS['__x402_pay_response']['status'] );
+		$this->assertSame( 402, $GLOBALS['x402_pay_response']['status'] );
 		$this->assert_402_envelope();
 	}
 
@@ -823,14 +823,14 @@ final class PaywallControllerTest extends TestCase {
 				),
 			)
 		);
-		$this->assertSame( 402, $GLOBALS['__x402_pay_response']['status'] );
-		$ct = (string) ( $GLOBALS['__x402_pay_response']['headers']['Content-Type'] ?? '' );
+		$this->assertSame( 402, $GLOBALS['x402_pay_response']['status'] );
+		$ct = (string) ( $GLOBALS['x402_pay_response']['headers']['Content-Type'] ?? '' );
 		$this->assertStringContainsString( 'text/html', $ct );
-		$html = (string) $GLOBALS['__x402_pay_response']['body'];
+		$html = (string) $GLOBALS['x402_pay_response']['body'];
 		$this->assertStringContainsString( 'Teaser for bots and browsers.', $html );
 		$this->assertStringContainsString( '0.01', $html );
 		// Spec response is body-only; no separate `payment-required` HTTP header.
-		$this->assertArrayNotHasKey( 'PAYMENT-REQUIRED', $GLOBALS['__x402_pay_response']['headers'] );
+		$this->assertArrayNotHasKey( 'PAYMENT-REQUIRED', $GLOBALS['x402_pay_response']['headers'] );
 	}
 
 	public function test_everyone_audience_human_document_navigation_serves_html_402(): void {
@@ -855,9 +855,9 @@ final class PaywallControllerTest extends TestCase {
 				),
 			)
 		);
-		$this->assertSame( 402, $GLOBALS['__x402_pay_response']['status'] );
-		$this->assertStringContainsString( 'text/html', (string) ( $GLOBALS['__x402_pay_response']['headers']['Content-Type'] ?? '' ) );
-		$this->assertStringContainsString( 'Everyone mode excerpt.', (string) $GLOBALS['__x402_pay_response']['body'] );
+		$this->assertSame( 402, $GLOBALS['x402_pay_response']['status'] );
+		$this->assertStringContainsString( 'text/html', (string) ( $GLOBALS['x402_pay_response']['headers']['Content-Type'] ?? '' ) );
+		$this->assertStringContainsString( 'Everyone mode excerpt.', (string) $GLOBALS['x402_pay_response']['body'] );
 	}
 
 	public function test_html_402_renders_site_identity_and_post_title(): void {
@@ -886,7 +886,7 @@ final class PaywallControllerTest extends TestCase {
 			)
 		);
 
-		$html = (string) $GLOBALS['__x402_pay_response']['body'];
+		$html = (string) $GLOBALS['x402_pay_response']['body'];
 		// Site identity row at the top: clickable wrapper with the site
 		// name and the configured Site Icon as the favicon-style avatar.
 		$this->assertStringContainsString( 'class="x402-pay-site"', $html );
@@ -931,7 +931,7 @@ final class PaywallControllerTest extends TestCase {
 			)
 		);
 
-		$html = (string) $GLOBALS['__x402_pay_response']['body'];
+		$html = (string) $GLOBALS['x402_pay_response']['body'];
 		$this->assertStringContainsString( 'Access for 2 hours', $html );
 		$this->assertStringNotContainsString( 'One-time access', $html );
 	}
@@ -957,7 +957,7 @@ final class PaywallControllerTest extends TestCase {
 			)
 		);
 
-		$html = (string) $GLOBALS['__x402_pay_response']['body'];
+		$html = (string) $GLOBALS['x402_pay_response']['body'];
 		$this->assertStringNotContainsString( 'class="x402-pay-error"', $html );
 		$this->assertStringNotContainsString( 'payment_required', $html );
 	}
@@ -981,7 +981,7 @@ final class PaywallControllerTest extends TestCase {
 			)
 		);
 
-		$html = (string) $GLOBALS['__x402_pay_response']['body'];
+		$html = (string) $GLOBALS['x402_pay_response']['body'];
 		// The user gets prose, not a stack trace.
 		$this->assertStringContainsString( 'class="x402-pay-error"', $html );
 		$this->assertStringContainsString( 'payment data sent by your wallet was invalid', $html );
@@ -1010,7 +1010,7 @@ final class PaywallControllerTest extends TestCase {
 			)
 		);
 
-		$html = (string) $GLOBALS['__x402_pay_response']['body'];
+		$html = (string) $GLOBALS['x402_pay_response']['body'];
 		// Empty site name + missing icon → no identity row at all, rather
 		// than an empty placeholder.
 		$this->assertStringNotContainsString( 'class="x402-pay-site"', $html );
@@ -1059,7 +1059,7 @@ final class PaywallControllerTest extends TestCase {
 			)
 		);
 
-		$html = (string) $GLOBALS['__x402_pay_response']['body'];
+		$html = (string) $GLOBALS['x402_pay_response']['body'];
 		$this->assertStringContainsString( 'data-x402-pay-provider="good_id"', $html );
 		$this->assertStringContainsString( 'id="x402-pay-status" role="status" aria-live="polite"', $html );
 		$this->assertStringNotContainsString( 'bad&quot;&gt;&lt;script&gt;', $html );
@@ -1084,7 +1084,7 @@ final class PaywallControllerTest extends TestCase {
 				),
 			)
 		);
-		$this->assertSame( 402, $GLOBALS['__x402_pay_response']['status'] );
+		$this->assertSame( 402, $GLOBALS['x402_pay_response']['status'] );
 		$this->assert_402_envelope();
 	}
 
@@ -1176,8 +1176,8 @@ final class PaywallControllerTest extends TestCase {
 			)
 		);
 
-		$this->assertSame( 200, $GLOBALS['__x402_pay_response']['status'] );
-		$this->assertFalse( $GLOBALS['__x402_pay_response']['exited'] );
+		$this->assertSame( 200, $GLOBALS['x402_pay_response']['status'] );
+		$this->assertFalse( $GLOBALS['x402_pay_response']['exited'] );
 	}
 
 	public function test_paywall_is_inert_when_selected_connector_is_unknown(): void {
@@ -1194,7 +1194,7 @@ final class PaywallControllerTest extends TestCase {
 			)
 		);
 
-		$this->assertSame( 200, $GLOBALS['__x402_pay_response']['status'] );
-		$this->assertFalse( $GLOBALS['__x402_pay_response']['exited'] );
+		$this->assertSame( 200, $GLOBALS['x402_pay_response']['status'] );
+		$this->assertFalse( $GLOBALS['x402_pay_response']['exited'] );
 	}
 }

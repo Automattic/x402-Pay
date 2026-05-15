@@ -9,6 +9,8 @@ declare(strict_types=1);
 
 namespace X402Pay\Admin;
 
+defined( 'ABSPATH' ) || exit;
+
 use X402Pay\Settings\SettingsRepository;
 
 /**

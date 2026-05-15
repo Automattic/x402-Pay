@@ -24,7 +24,7 @@ use X402Pay\Settings\SettingsRepository;
  * Decides whether to serve, verify-then-serve, or reject with 402.
  *
  * The controller does not `echo` or `exit`; it only mutates a response
- * structure on $GLOBALS['__x402_pay_response']. The Plugin bootstrap is
+ * structure on $GLOBALS['x402_pay_response']. The Plugin bootstrap is
  * responsible for echoing the body and exiting when `exited` is true.
  * This split keeps the controller unit-testable.
  */
@@ -258,7 +258,7 @@ final class PaywallController {
 			)
 		);
 		if ( '' !== $receipt ) {
-			$GLOBALS['__x402_pay_response']['success_headers'][] = 'X-Payment-Response: ' . $receipt;
+			$GLOBALS['x402_pay_response']['success_headers'][] = 'X-Payment-Response: ' . $receipt;
 		}
 
 		$this->settlement_notifier()->notify(
@@ -292,19 +292,19 @@ final class PaywallController {
 		status_header( 402 );
 
 		if ( $this->should_serve_html_402_body() ) {
-			$GLOBALS['__x402_pay_response']['headers']['Content-Type'] = 'text/html; charset=UTF-8';
-			$GLOBALS['__x402_pay_response']['body']                    = $this->build_html_402_body( $request, $requirements, $rule, $body );
+			$GLOBALS['x402_pay_response']['headers']['Content-Type'] = 'text/html; charset=UTF-8';
+			$GLOBALS['x402_pay_response']['body']                    = $this->build_html_402_body( $request, $requirements, $rule, $body );
 		} else {
-			$GLOBALS['__x402_pay_response']['headers']['Content-Type'] = 'application/json';
+			$GLOBALS['x402_pay_response']['headers']['Content-Type'] = 'application/json';
 			// Array union (+): callers' keys can't override the spec-required envelope.
-			$GLOBALS['__x402_pay_response']['body'] = wp_json_encode(
+			$GLOBALS['x402_pay_response']['body'] = wp_json_encode(
 				array(
 					'x402Version' => 1,
 					'accepts'     => array( $requirements ),
 				) + $body
 			);
 		}
-		$GLOBALS['__x402_pay_response']['exited'] = true;
+		$GLOBALS['x402_pay_response']['exited'] = true;
 	}
 
 	/**
@@ -937,8 +937,8 @@ CSS;
 			max( $ttl, 0 ),
 			$cookie_path
 		);
-		$GLOBALS['__x402_pay_response']['success_headers'][] = self::GRANT_HEADER . ': ' . $token;
-		$GLOBALS['__x402_pay_response']['success_headers'][] = 'Set-Cookie: ' . $cookie;
+		$GLOBALS['x402_pay_response']['success_headers'][] = self::GRANT_HEADER . ': ' . $token;
+		$GLOBALS['x402_pay_response']['success_headers'][] = 'Set-Cookie: ' . $cookie;
 	}
 
 	private function sanitize_cookie_path( string $path ): string {

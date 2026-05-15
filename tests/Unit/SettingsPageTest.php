@@ -49,7 +49,11 @@ final class SettingsPageTest extends TestCase {
 		$page = new SettingsPage( new SettingsRepository() );
 		$page->register_settings();
 
-		$callback = $GLOBALS['__x402_pay_registered_settings'][ SettingsPage::GROUP ][ SettingsRepository::OPTION_NAME ]['sanitize_callback'];
+		$args     = $GLOBALS['__x402_pay_registered_settings'][ SettingsPage::GROUP ][ SettingsRepository::OPTION_NAME ];
+		$callback = $args['sanitize_callback'];
+
+		$this->assertSame( 'array', $args['type'] );
+		$this->assertIsCallable( $callback );
 
 		$result = $callback(
 			array(
