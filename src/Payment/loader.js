@@ -13,14 +13,15 @@
 (function () {
 	if ( window.x402Pay ) return;
 
-	var contextEl = document.getElementById( 'x402-pay-payment-context' );
-	if ( ! contextEl ) return;
-
-	var ctx;
-	try {
-		ctx = JSON.parse( contextEl.textContent );
-	} catch ( _ ) {
-		return;
+	var ctx = window.x402PayPaymentContext || null;
+	if ( ! ctx ) {
+		var contextEl = document.getElementById( 'x402-pay-payment-context' );
+		if ( ! contextEl ) return;
+		try {
+			ctx = JSON.parse( contextEl.textContent );
+		} catch ( _ ) {
+			return;
+		}
 	}
 
 	var registry = Object.create( null );

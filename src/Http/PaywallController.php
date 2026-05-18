@@ -71,6 +71,10 @@ final class PaywallController {
 	/** Cookie name used to redeem the grant on subsequent requests from a browser. */
 	public const GRANT_COOKIE = 'x402_pay_grant';
 
+	private const PUBLIC_STYLE_HANDLE    = 'x402-pay-402';
+	private const PUBLIC_HOST_HANDLE     = 'x402-pay-402-host';
+	private const PROVIDER_HANDLE_PREFIX = 'x402-pay-402-provider-';
+
 	/**
 	 * Lazily-resolved facilitator client + the builder that wraps its profile.
 	 * Deferred so requests that never reach the paywall path don't pay for
@@ -382,7 +386,7 @@ final class PaywallController {
 			. '<title>'
 			. esc_html__( 'Payment required', 'x402-pay' )
 			. '</title>'
-			. $this->html_402_styles()
+			. $this->html_402_head_assets()
 			. '</head><body><main class="x402-pay-card">'
 			. $site_block
 			. '<div class="x402-pay-headline">'
@@ -548,10 +552,9 @@ final class PaywallController {
 
 	/**
 	 * Render the payment-provider buttons block. Each eligible provider gets a
-	 * `<div data-x402-pay-provider="…">` slot plus a `<script src="…">` tag; the
-	 * host loader walks the slots once registrations are in. Returns an empty
-	 * string if no providers are eligible, so the controller falls back to the
-	 * developer-facing JSON-body hint.
+	 * slot, then the host loader walks the slots once registrations are in.
+	 * Returns an empty string if no providers are eligible, so the controller
+	 * falls back to the developer-facing JSON-body hint.
 	 *
 	 * @param array<string,mixed> $request
 	 * @param array<string,mixed> $requirements
@@ -573,14 +576,14 @@ final class PaywallController {
 			return '';
 		}
 
-		$context        = array(
+		$context          = array(
 			'requirements' => $requirements,
 			'resourceUrl'  => $resource_url,
 			'providers'    => array(),
 		);
-		$slots          = '';
-		$script_tags    = '';
-		$seen_providers = array();
+		$slots            = '';
+		$provider_scripts = array();
+		$seen_providers   = array();
 		foreach ( $providers as $provider ) {
 			$id = $this->sanitize_provider_id( (string) ( $provider['id'] ?? '' ) );
 			if ( '' === $id ) {
@@ -589,26 +592,26 @@ final class PaywallController {
 			if ( isset( $seen_providers[ $id ] ) ) {
 				continue;
 			}
+			$script_url = esc_url_raw( (string) ( $provider['script_url'] ?? '' ) );
+			if ( '' === $script_url ) {
+				continue;
+			}
 			$seen_providers[ $id ] = true;
 
 			$context['providers'][ $id ] = array(
 				'config' => $provider['config'],
 			);
 			$slots                      .= '<div data-x402-pay-provider="' . esc_attr( $id ) . '"></div>';
-			$script_tags                .= '<script defer src="' . esc_url( $provider['script_url'] ) . '"></script>'; // phpcs:ignore WordPress.WP.EnqueuedResources.NonEnqueuedScript -- The 402 body is a standalone response outside the theme enqueue lifecycle.
+			$provider_scripts[ $id ]     = $script_url;
 		}
 
 		$context_json = wp_json_encode(
 			$context,
 			JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT
 		);
-		if ( false === $context_json ) {
+		if ( false === $context_json || '' === $slots || empty( $provider_scripts ) ) {
 			return '';
 		}
-
-		$host_url       = plugins_url( 'src/Payment/loader.js', X402_PAY_FILE );
-		$context_script = '<script type="application/json" id="x402-pay-payment-context">' . $context_json . '</script>'; // phpcs:ignore WordPress.WP.EnqueuedResources.NonEnqueuedScript -- JSON data script for the standalone 402 response.
-		$host_script    = '<script defer src="' . esc_url( $host_url ) . '"></script>'; // phpcs:ignore WordPress.WP.EnqueuedResources.NonEnqueuedScript -- The 402 body is a standalone response outside the theme enqueue lifecycle.
 
 		$flow_block = '<div class="x402-pay-flow" data-x402-pay-flow hidden>'
 			. '<span class="x402-pay-spinner" aria-hidden="true"></span>'
@@ -634,9 +637,7 @@ final class PaywallController {
 			. '<div class="x402-pay-providers" data-x402-pay-providers>' . $slots . '</div>'
 			. $flow_block
 			. $modal_block
-			. $context_script
-			. $host_script
-			. $script_tags
+			. $this->html_402_footer_assets( $context_json, $provider_scripts )
 			. '</div>';
 	}
 
@@ -645,12 +646,63 @@ final class PaywallController {
 		return 1 === preg_match( '/^[a-z0-9_-]+$/', $id ) ? $id : '';
 	}
 
-	private function html_402_styles(): string {
+	private function html_402_head_assets(): string {
+		wp_register_style( self::PUBLIC_STYLE_HANDLE, false, array(), X402_PAY_VERSION );
+		wp_enqueue_style( self::PUBLIC_STYLE_HANDLE );
+		wp_add_inline_style( self::PUBLIC_STYLE_HANDLE, $this->html_402_css() );
+
+		ob_start();
+		wp_print_styles( array( self::PUBLIC_STYLE_HANDLE ) );
+		return (string) ob_get_clean();
+	}
+
+	/**
+	 * @param array<string,string> $provider_scripts Map of provider ID to script URL.
+	 */
+	private function html_402_footer_assets( string $context_json, array $provider_scripts ): string {
+		$handles     = array( self::PUBLIC_HOST_HANDLE );
+		$script_args = array(
+			'strategy'  => 'defer',
+			'in_footer' => false,
+		);
+
+		wp_register_script(
+			self::PUBLIC_HOST_HANDLE,
+			plugins_url( 'src/Payment/loader.js', X402_PAY_FILE ),
+			array(),
+			X402_PAY_VERSION,
+			$script_args
+		);
+		wp_add_inline_script(
+			self::PUBLIC_HOST_HANDLE,
+			'window.x402PayPaymentContext = ' . $context_json . ';',
+			'before'
+		);
+		wp_enqueue_script( self::PUBLIC_HOST_HANDLE );
+
+		foreach ( $provider_scripts as $id => $url ) {
+			$handle    = self::PROVIDER_HANDLE_PREFIX . $id;
+			$handles[] = $handle;
+			wp_register_script(
+				$handle,
+				$url,
+				array( self::PUBLIC_HOST_HANDLE ),
+				X402_PAY_VERSION,
+				$script_args
+			);
+			wp_enqueue_script( $handle );
+		}
+
+		ob_start();
+		wp_print_scripts( $handles );
+		return (string) ob_get_clean();
+	}
+
+	private function html_402_css(): string {
 		// Muted, deliberately quiet palette. Greyscale only — site-icon
 		// colour is the one visual focal point so the paywall page never
 		// fights with the host site's branding.
 		return <<<'CSS'
-<style>
 	:root {
 		--x402-pay-bg: #f5f5f4;
 		--x402-pay-surface: #ffffff;
@@ -943,7 +995,6 @@ final class PaywallController {
 		border-radius: 8px;
 		background: var(--x402-pay-bg);
 	}
-</style>
 CSS;
 	}
 

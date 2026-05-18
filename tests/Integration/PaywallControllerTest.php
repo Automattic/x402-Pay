@@ -23,6 +23,12 @@ final class PaywallControllerTest extends TestCase {
 		$GLOBALS['__x402_pay_filters']         = array();
 		$GLOBALS['__x402_pay_actions']         = array();
 		$GLOBALS['__x402_pay_transients']      = array();
+		$GLOBALS['__x402_pay_registered_scripts'] = array();
+		$GLOBALS['__x402_pay_enqueued_scripts']   = array();
+		$GLOBALS['__x402_pay_inline_scripts']     = array();
+		$GLOBALS['__x402_pay_registered_styles']  = array();
+		$GLOBALS['__x402_pay_enqueued_styles']    = array();
+		$GLOBALS['__x402_pay_inline_styles']      = array();
 		$GLOBALS['__x402_pay_options']         = array(
 			'x402_pay_settings' => array(
 				'selected_facilitator_id' => 'x402_pay_test',
@@ -1069,6 +1075,11 @@ final class PaywallControllerTest extends TestCase {
 		);
 
 		$html = (string) $GLOBALS['x402_pay_response']['body'];
+		$this->assertArrayHasKey( 'x402-pay-402', $GLOBALS['__x402_pay_enqueued_styles'] );
+		$this->assertArrayHasKey( 'x402-pay-402-host', $GLOBALS['__x402_pay_enqueued_scripts'] );
+		$this->assertArrayHasKey( 'x402-pay-402-provider-good_id', $GLOBALS['__x402_pay_enqueued_scripts'] );
+		$this->assertNotEmpty( $GLOBALS['__x402_pay_inline_styles']['x402-pay-402'] ?? array() );
+		$this->assertNotEmpty( $GLOBALS['__x402_pay_inline_scripts']['x402-pay-402-host']['before'] ?? array() );
 		$this->assertStringContainsString( 'data-x402-pay-provider="good_id"', $html );
 		$this->assertStringContainsString( 'data-x402-pay-providers', $html );
 		$this->assertStringContainsString( 'data-x402-pay-flow', $html );

@@ -17,7 +17,7 @@ namespace X402Pay\Payment;
  *   array{
  *     id:          string,                  // Stable slug, used as the slot data attribute.
  *     label:       string,                  // Human-readable name (currently informational).
- *     script_url:  string,                  // Enqueued <script src="…">; runs in the publisher origin.
+ *     script_url:  string,                  // Enqueued provider script; runs in the publisher origin.
  *     is_eligible: bool,                    // False suppresses the slot and its script.
  *     config?:     array<string,mixed>,     // Provider-specific data passed verbatim to the JS callback.
  *   }

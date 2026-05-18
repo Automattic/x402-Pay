@@ -497,13 +497,57 @@ if ( ! function_exists( 'plugins_url' ) ) {
 }
 if ( ! function_exists( 'wp_enqueue_script' ) ) {
 	function wp_enqueue_script( string $handle, string $src = '', array $deps = array(), $ver = false, $in_footer = false ): bool {
+		$registered = $GLOBALS['__x402_pay_registered_scripts'][ $handle ] ?? array();
 		$GLOBALS['__x402_pay_enqueued_scripts'][ $handle ] = array(
 			'src'       => $src,
 			'deps'      => $deps,
 			'ver'       => $ver,
 			'in_footer' => $in_footer,
+		) + $registered;
+		if ( '' === $src && isset( $registered['src'] ) ) {
+			$GLOBALS['__x402_pay_enqueued_scripts'][ $handle ]['src'] = $registered['src'];
+		}
+		return true;
+	}
+}
+if ( ! function_exists( 'wp_register_script' ) ) {
+	function wp_register_script( string $handle, string $src, array $deps = array(), $ver = false, $args = array() ): bool {
+		$GLOBALS['__x402_pay_registered_scripts'][ $handle ] = array(
+			'src'  => $src,
+			'deps' => $deps,
+			'ver'  => $ver,
+			'args' => $args,
 		);
 		return true;
+	}
+}
+if ( ! function_exists( 'wp_add_inline_script' ) ) {
+	function wp_add_inline_script( string $handle, string $data, string $position = 'after' ): bool {
+		$position = 'before' === $position ? 'before' : 'after';
+		$GLOBALS['__x402_pay_inline_scripts'][ $handle ][ $position ][] = $data;
+		return true;
+	}
+}
+if ( ! function_exists( 'wp_print_scripts' ) ) {
+	function wp_print_scripts( $handles = false ): array {
+		$handles = false === $handles ? array_keys( $GLOBALS['__x402_pay_enqueued_scripts'] ?? array() ) : (array) $handles;
+		foreach ( $handles as $handle ) {
+			$script = $GLOBALS['__x402_pay_enqueued_scripts'][ $handle ]
+				?? $GLOBALS['__x402_pay_registered_scripts'][ $handle ]
+				?? null;
+			if ( ! is_array( $script ) ) {
+				continue;
+			}
+			foreach ( $GLOBALS['__x402_pay_inline_scripts'][ $handle ]['before'] ?? array() as $inline ) {
+				echo '<script>' . $inline . '</script>';
+			}
+			$defer = isset( $script['args']['strategy'] ) && 'defer' === $script['args']['strategy'] ? ' defer' : '';
+			echo '<script src="' . esc_url( (string) $script['src'] ) . '"' . $defer . '></script>';
+			foreach ( $GLOBALS['__x402_pay_inline_scripts'][ $handle ]['after'] ?? array() as $inline ) {
+				echo '<script>' . $inline . '</script>';
+			}
+		}
+		return $handles;
 	}
 }
 if ( ! function_exists( 'wp_localize_script' ) ) {
@@ -514,12 +558,54 @@ if ( ! function_exists( 'wp_localize_script' ) ) {
 }
 if ( ! function_exists( 'wp_enqueue_style' ) ) {
 	function wp_enqueue_style( string $handle, string $src = '', array $deps = array(), $ver = false, string $media = 'all' ): bool {
+		$registered = $GLOBALS['__x402_pay_registered_styles'][ $handle ] ?? array();
 		$GLOBALS['__x402_pay_enqueued_styles'][ $handle ] = array(
-			'src'  => $src,
-			'deps' => $deps,
-			'ver'  => $ver,
+			'src'   => $src,
+			'deps'  => $deps,
+			'ver'   => $ver,
+			'media' => $media,
+		) + $registered;
+		if ( '' === $src && isset( $registered['src'] ) ) {
+			$GLOBALS['__x402_pay_enqueued_styles'][ $handle ]['src'] = $registered['src'];
+		}
+		return true;
+	}
+}
+if ( ! function_exists( 'wp_register_style' ) ) {
+	function wp_register_style( string $handle, $src = '', array $deps = array(), $ver = false, string $media = 'all' ): bool {
+		$GLOBALS['__x402_pay_registered_styles'][ $handle ] = array(
+			'src'   => $src,
+			'deps'  => $deps,
+			'ver'   => $ver,
+			'media' => $media,
 		);
 		return true;
+	}
+}
+if ( ! function_exists( 'wp_add_inline_style' ) ) {
+	function wp_add_inline_style( string $handle, string $data ): bool {
+		$GLOBALS['__x402_pay_inline_styles'][ $handle ][] = $data;
+		return true;
+	}
+}
+if ( ! function_exists( 'wp_print_styles' ) ) {
+	function wp_print_styles( $handles = false ): array {
+		$handles = false === $handles ? array_keys( $GLOBALS['__x402_pay_enqueued_styles'] ?? array() ) : (array) $handles;
+		foreach ( $handles as $handle ) {
+			$style = $GLOBALS['__x402_pay_enqueued_styles'][ $handle ]
+				?? $GLOBALS['__x402_pay_registered_styles'][ $handle ]
+				?? null;
+			if ( ! is_array( $style ) ) {
+				continue;
+			}
+			if ( ! empty( $style['src'] ) ) {
+				echo '<link rel="stylesheet" href="' . esc_url( (string) $style['src'] ) . '">';
+			}
+			foreach ( $GLOBALS['__x402_pay_inline_styles'][ $handle ] ?? array() as $inline ) {
+				echo '<style>' . $inline . '</style>';
+			}
+		}
+		return $handles;
 	}
 }
 if ( ! function_exists( 'get_terms' ) ) {
@@ -708,8 +794,13 @@ $GLOBALS['__x402_pay_bloginfo']       = array();
 $GLOBALS['__x402_pay_existing_terms']  = array();
 $GLOBALS['__x402_pay_inserted_terms']  = array();
 $GLOBALS['__x402_pay_settings_errors'] = array();
-$GLOBALS['__x402_pay_enqueued_scripts'] = array();
-$GLOBALS['__x402_pay_localized_data']   = array();
+$GLOBALS['__x402_pay_registered_scripts'] = array();
+$GLOBALS['__x402_pay_enqueued_scripts']   = array();
+$GLOBALS['__x402_pay_inline_scripts']     = array();
+$GLOBALS['__x402_pay_registered_styles']  = array();
+$GLOBALS['__x402_pay_enqueued_styles']    = array();
+$GLOBALS['__x402_pay_inline_styles']      = array();
+$GLOBALS['__x402_pay_localized_data']     = array();
 $GLOBALS['x402_pay_response'] = array(
 	'status'  => 200,
 	'headers' => array(),
