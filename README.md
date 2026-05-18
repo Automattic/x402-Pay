@@ -96,6 +96,10 @@ The plugin talks to two external facilitator endpoints, and only when a request 
 
 ## Changelog
 
+### 0.1.2
+
+- Public 402 page assets now use WordPress enqueue APIs for Plugin Directory review compliance.
+
 ### 0.1.1
 
 - Paywall page swaps the wallet buttons for a single live status message during a payment, and surfaces wallet rejections / settlement failures in a dismissible modal.
